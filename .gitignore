@@ -1,32 +1,10 @@
-# Prerequisites
-*.d
+build*
+compile_commands.json
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+.vscode
+.cache
+.DS_Store
+.idea
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+# Ignore all version.hpp files
+**/version.hpp
