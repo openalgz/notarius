@@ -588,18 +588,11 @@ function(set_project_info_by_git project_name project_url project_description te
        message("Latest Git Tag: ${GIT_VERSION_TAG}")
    endif()
 
-   if (NOT git_branch_result EQUAL 0 AND NOT git_tag_result EQUAL 0)
+   if ((NOT git_branch_result EQUAL 0 AND NOT git_tag_result EQUAL 0) OR GIT_VERSION_TAG STREQUAL "")
       set(GIT_VERSION_TAG "v${YY}.${MM}.${DD}")
    endif()
-   
-   string(LENGTH "${GIT_VERSION_TAG}" tag_length)
-   
-   if(tag_length GREATER 0)
-       set(MY_PROJECT_VERSION "${GIT_VERSION_TAG}" CACHE INTERNAL "" FORCE)
-   else()  
-       set(MY_PROJECT_VERSION "${GIT_VERSION_TAG}" CACHE INTERNAL "" FORCE)
-   endif()
-   
+  
+   set(MY_PROJECT_VERSION "${GIT_VERSION_TAG}" CACHE INTERNAL "" FORCE)
    string(REGEX MATCH "v([0-9]+)\\.([0-9]+)\\.([0-9]+)" version_match "${GIT_VERSION_TAG}")
    
    if(version_match)
@@ -609,7 +602,6 @@ function(set_project_info_by_git project_name project_url project_description te
    endif()
    
    set(MY_PROJECT_VERSION ${MY_PROJECT_VERSION} CACHE INTERNAL "" FORCE)
-
    set(MY_PROJECT_NAME "${project_name}" CACHE INTERNAL "" FORCE)
    set(MY_PROJECT_DESCRIPTION  "${project_description}" CACHE INTERNAL "" FORCE)
    set(MY_PROJECT_HOMEPAGE_URL "${project_url}" CACHE INTERNAL "" FORCE)

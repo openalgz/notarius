@@ -66,13 +66,14 @@ set_common_include_directory("${ROOT_INCLUDE_DIR}" "called from prelude.cmake: l
 
 # if version is empty then git version is used.
 #
-macro(configure_projects name version)
+macro(configure_main_project name version)
 
    set(PRODUCT_NAME ${name})
    
    if(NOT DEFINED version OR "${version}" STREQUAL "")
       set_project_info_by_git("${name}" "${PROJECT_URL}" "${PROJECT_DESCRIPTION}" "${ROOT_INCLUDE_DIR}/${name}/version.h.in")
-      string(SUBSTRING ${GIT_VERSION_TAG} 1 -1 PRODUCT_VERSION) 
+      string(SUBSTRING "${MY_PROJECT_VERSION}" 1 -1 GIT_VERSION_TAG)
+      set("${name}_PROJECT_VERSION" "${GIT_VERSION_TAG}")
    else()
       force_project_version("${version}" "${name}" "${PROJECT_URL}" "${PROJECT_DESCRIPTION}" "${ROOT_INCLUDE_DIR}/${name}/version.h.in")
    endif()
