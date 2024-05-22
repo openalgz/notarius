@@ -1,4 +1,4 @@
-# notarius C++ Logging Library
+# notarius, A Fast and Simple C++ Logging Library
 
 > [!NOTE]
 >
