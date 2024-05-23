@@ -12,6 +12,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write  # Grant write permission to the repository content
+
     steps:
     - uses: actions/checkout@v4
     - uses: DoozyX/clang-format-lint-action@v0.16.2
