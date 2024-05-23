@@ -32,7 +32,8 @@ namespace slx
       inline constexpr double millisecs_to_secs = 0.001;
       inline constexpr double nanosecs_to_millisecs = 1e-6;
 
-      std::string write_ave_duration_message(std::chrono::steady_clock::duration duration) {
+      std::string write_ave_duration_message(std::chrono::steady_clock::duration duration)
+      {
          using namespace std::chrono;
          auto duration_ns = duration_cast<nanoseconds>(duration).count();
          const int64_t minutes = duration_ns / ns_per_min;
@@ -49,7 +50,10 @@ namespace slx
 
       // returns: yyyymmdd::hh:mm:ss
       //
-      std::string current_time_as_string(const std::string& format = "%Y-%m-%d (%H:%M:%S)", const std::chrono::system_clock::time_point& time_point = std::chrono::system_clock::now()) {
+      std::string current_time_as_string(
+         const std::string& format = "%Y-%m-%d (%H:%M:%S)",
+         const std::chrono::system_clock::time_point& time_point = std::chrono::system_clock::now())
+      {
          auto time = std::chrono::system_clock::to_time_t(time_point);
          auto localtime = std::localtime(&time);
          std::ostringstream oss;
@@ -59,8 +63,9 @@ namespace slx
 
       /* The above is slightly faster ...
        *
-      std::string current_time_as_string(const std::chrono::system_clock::time_point& time_point = std::chrono::system_clock::now(), const std::string_view format = "{0:04d}{1:02d}{2:02d}::{3:02d}:{4:02d}:{5:02d}") {
-         auto time = std::chrono::system_clock::to_time_t(time_point);
+      std::string current_time_as_string(const std::chrono::system_clock::time_point& time_point =
+      std::chrono::system_clock::now(), const std::string_view format =
+      "{0:04d}{1:02d}{2:02d}::{3:02d}:{4:02d}:{5:02d}") { auto time = std::chrono::system_clock::to_time_t(time_point);
          auto localtime = std::localtime(&time);
          std::string formatted_time = std::fmt_string(format,
             localtime->tm_year + 1900,
@@ -92,12 +97,10 @@ namespace slx
          return std::format("{}s {}ms", seconds, milliseconds);
       }
 
-      inline std::string write_duration_message(int nanoseconds)
-      {
-         return std::format("{} nanoseconds", nanoseconds);
-      }
+      inline std::string write_duration_message(int nanoseconds) { return std::format("{} nanoseconds", nanoseconds); }
 
-      inline std::string duration_to_string(std::chrono::steady_clock::duration duration) {
+      inline std::string duration_to_string(std::chrono::steady_clock::duration duration)
+      {
          auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration).count();
          auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration).count() % 60;
          auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() % 1000;
@@ -123,48 +126,55 @@ namespace slx
 
       struct duration_t
       {
-         std::chrono::steady_clock::time_point t0{ std::chrono::steady_clock::now() };
+         std::chrono::steady_clock::time_point t0{std::chrono::steady_clock::now()};
          std::chrono::steady_clock::time_point t_end{};
 
          void reset() { t0 = std::chrono::steady_clock::now(); }
 
-         auto start() {
+         auto start()
+         {
             t0 = std::chrono::steady_clock::now();
             return t0;
          }
 
-         auto stop() {
+         auto stop()
+         {
             t_end = std::chrono::steady_clock::now();
             return t_end;
          }
 
-         double duration_in_seconds() {
+         double duration_in_seconds()
+         {
             stop();
             return std::chrono::duration<double>(t_end - t0).count();
          }
 
-         double duration_in_milliseconds() {
+         double duration_in_milliseconds()
+         {
             stop();
             return std::chrono::duration<double, std::milli>(t_end - t0).count();
          }
 
-         double duration_in_hours() {
+         double duration_in_hours()
+         {
             stop();
             return duration_in_seconds() * secs_to_hours;
          }
 
-         double duration_in_nanoseconds() {
+         double duration_in_nanoseconds()
+         {
             stop();
             return std::chrono::duration<double, std::nano>(t_end - t0).count();
          }
 
-         std::chrono::steady_clock::duration duration() {
+         std::chrono::steady_clock::duration duration()
+         {
             stop();
             return (t_end - t0);
          }
 
-         std::string duration_to_string() {
-
+         std::string duration_to_string()
+         {
             const double duration_milliseconds = duration_in_milliseconds();
             const double duration_seconds = duration_in_seconds();
             const double duration_hours = duration_seconds * secs_to_hours;
@@ -173,8 +183,11 @@ namespace slx
             const int remaining_seconds = static_cast<int>((duration_seconds - hours * 3600.0));
             const int minutes = remaining_seconds / 60;
             const int seconds = remaining_seconds % 60;
-            const int milliseconds = static_cast<int>(duration_milliseconds - hours * 3600 * 1000 - minutes * 60 * 1000 - seconds * 1000);
-            const int nanoseconds = static_cast<int>((milliseconds * 1000) + ((duration_seconds - hours * 3600.0 - minutes * 60.0 - seconds - milliseconds / 1000.0) * 1e6));
+            const int milliseconds =
+               static_cast<int>(duration_milliseconds - hours * 3600 * 1000 - minutes * 60 * 1000 - seconds * 1000);
+            const int nanoseconds = static_cast<int>(
+               (milliseconds * 1000) +
+               ((duration_seconds - hours * 3600.0 - minutes * 60.0 - seconds - milliseconds / 1000.0) * 1e6));
 
             if (duration_hours >= 1.0) {
                return write_duration_message(hours, minutes, seconds, milliseconds);
@@ -189,7 +202,6 @@ namespace slx
                return write_duration_message(milliseconds, nanoseconds);
             }
          }
-
       };
    }
 }
