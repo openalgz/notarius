@@ -268,12 +268,12 @@ namespace slx
       void pause_file_logging()
       {
          std::unique_lock lock(mutex_);
-         options_.enable_file_logging_ = false;
+         options_.enable_file_logging = false;
       }
       void enable_file_logging()
       {
          std::unique_lock lock(mutex_);
-         options_.enable_file_logging_ = true;
+         options_.enable_file_logging = true;
       }
 
       void pause_stdout()

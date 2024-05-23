@@ -41,11 +41,11 @@ namespace slx
          const auto max_file_index_exceeded_msg =
             "Warning: The max file limit of " + std::to_string(max_file_index) + " has been reached.";
 
-         if (!std::filesystem::exists(input_path_name)) return input_path_name;
+         if (!std::filesystem::exists(input_path_name)) return input_path_name.data();
 
          size_t ext_pos = input_path_name.find_last_of('.');
-         std::string base_name = input_path_name.substr(0, ext_pos);
-         std::string extension = (ext_pos != std::string::npos) ? input_path_name.substr(ext_pos) : "";
+         std::string base_name = input_path_name.substr(0, ext_pos).data();
+         std::string extension = (ext_pos != std::string::npos) ? input_path_name.substr(ext_pos).data() : "";
 
          size_t underscore = base_name.find_last_of('_');
          base_name = base_name.substr(0, underscore);
