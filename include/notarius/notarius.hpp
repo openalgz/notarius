@@ -211,8 +211,6 @@ namespace slx
 
       bool enable_file_logging{true};
 
-      bool open_file_store_for_appending{true};
-
       bool append_to_log{true};
 
       // Split log files when they get to a certain size.
