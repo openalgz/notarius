@@ -150,13 +150,13 @@ inline void test_notarius_async(const std::string& caption, int id, int max_line
 inline void publish_results(const std::string_view caption)
 {
    notarius_results_logger("**{}**:\n", caption);
-   
+
    notarius_results_logger("{}", spdlog_time_result);
    notarius_results_logger("{}\n", notarius_time_result);
 
    notarius_results_logger("{}", spdlog_async_time_result);
    notarius_results_logger("{}", notarius_async_time_result);
-   
+
    notarius_results_logger("\n\n");
    notarius_results_logger.close();
 }
@@ -189,7 +189,7 @@ int spdlog_vs_notarius_tests(std::string_view run, int total_test_runs_count)
    "notarius_file_logging_async"_test = [&] {
       slx::chrono::duration_t timer;
       for (int i = 0; i < 10; ++i) {
-        test_notarius_async(std::string(run), i, max_lines_count_);
+         test_notarius_async(std::string(run), i, max_lines_count_);
       }
       notarius_logger("\n");
       ave_async_notarius_time_result += timer.duration();

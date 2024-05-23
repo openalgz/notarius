@@ -399,7 +399,8 @@ namespace slx
                if (log_level::error == level) {
                   cerr_buffer_.append(msg);
                   cerr_buffer_.flush_if_not_empty();
-               } else {
+               }
+               else {
                   cout_buffer_.append(msg);
                   cout_buffer_.flush_if_not_empty();
                }
@@ -469,7 +470,8 @@ namespace slx
       }
 
       template <log_level level, typename... Args>
-      void std_flush_impl(ostream_flusher_t<std::ostream&, 512>& buffer, std::format_string<Args...> fmt, Args&&... args)
+      void std_flush_impl(ostream_flusher_t<std::ostream&, 512>& buffer, std::format_string<Args...> fmt,
+                          Args&&... args)
       {
          std::unique_lock<std::shared_mutex> lock(mutex_, std::defer_lock);
          if (not options_.lock_free_enabled) {
