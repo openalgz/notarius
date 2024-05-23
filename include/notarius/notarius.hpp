@@ -310,8 +310,8 @@ namespace slx
       }
 
       ostream_flusher_t<std::ostream&, 512> cout_buffer_{std::cout};
-      ostream_flusher_t<std::ostream&, 512> cerr_buffer_{std::cout};
-      ostream_flusher_t<std::ostream&, 512> clog_buffer_{std::cout};
+      ostream_flusher_t<std::ostream&, 512> cerr_buffer_{std::cerr};
+      ostream_flusher_t<std::ostream&, 512> clog_buffer_{std::clog};
 
       // The logging store.
       // using std::string as the store is slightly faster:
