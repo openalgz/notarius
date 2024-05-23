@@ -58,8 +58,9 @@ static std::chrono::steady_clock::duration ave_async_spdlog_time_result{};
 inline slx::notarius_t<"notarius-results",
                        //
                        // These are the defaults but show here:
-                       // 
-                       // i.e., inline slx::notarius_t<"notarius-results", slx::notarius_opts_t{}, "md"> notarius_logger;
+                       //
+                       // i.e., inline slx::notarius_t<"notarius-results", slx::notarius_opts_t{}, "md">
+                       // notarius_logger;
                        //
                        slx::notarius_opts_t{.lock_free_enabled{false},
                                             .immediate_mode{false},
@@ -72,7 +73,6 @@ inline slx::notarius_t<"notarius-results",
                                             .split_max_log_file_size_bytes_{2'097'152} /*~ 2MB*/},
                        "md">
    notarius_logger;
-
 
 #ifdef SPDLOG
 inline auto spdlog_logger = spdlog::basic_logger_mt("basic_logger", "spdlog-results.md");
