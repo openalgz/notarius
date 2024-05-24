@@ -1,3 +1,7 @@
+set(PROJECT_NAME "notarius")
+
+set(CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 # ---- In-source guard ----
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(
@@ -8,23 +12,26 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   )
 endif()
 
-set(PROJECT_SOURCE_DIR "${CMAKE_SOURCE_DIR}" CACHE INTERNAL "" FORCE)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(${PROJECT_NAME}_STANDALONE ON)
+else()
+    set(${PROJECT_NAME}_STANDALONE OFF)
+endif()
 
-if (NOT EXISTS "${CMAKE_DIR}" AND EXISTS "${CMAKE_SOURCE_DIR}/cmake")
-   set(CMAKE_DIR "${CMAKE_SOURCE_DIR}/cmake" CACHE INTERNAL "" FORCE) 
-   list(APPEND CMAKE_MODULE_PATH "${CMAKE_DIR}")
+set(${PROJECT_NAME}_PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS "on")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+   list(REMOVE_DUPLICATES CMAKE_MODULE_PATH)
 endif()
 
 include("${CMAKE_DIR}/core/project-is-top-level.cmake")
 include("${CMAKE_DIR}/core/variables.cmake")
   
-set(ROOT_PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "" FORCE)
-
-if (EXISTS "${ROOT_PROJECT_DIR}/include")
-   set(ROOT_INCLUDE_DIR "${ROOT_PROJECT_DIR}/include" CACHE INTERNAL "" FORCE)
-endif()
-
-# sets 'PROJECTS_SOURCES_DIR' variable (CACHE INTERNAL)
+# sets '${PROJECT_NAME}_SOURCES_DIR' variable (CACHE INTERNAL)
 #
 function (set_projects_sources_directory)
    #
@@ -33,7 +40,8 @@ function (set_projects_sources_directory)
    # First path found is the 'default' used. Therefore results are 
    # mutally exclusive!
    #
-   set(PROJECTS_SOURCES_DIR "")  # Initialize PROJECTS_SOURCES_DIR variable
+   set(${PROJECT_NAME}_SOURCES_DIR "")  # Initialize ${PROJECT_NAME}_SOURCES_DIR variable
+   
    set(PROJECTS_DIRS
        "${CMAKE_CURRENT_SOURCE_DIR}/projects"
        "${CMAKE_CURRENT_SOURCE_DIR}/sources"
@@ -43,8 +51,8 @@ function (set_projects_sources_directory)
    )
    
    foreach(dir ${PROJECTS_DIRS})
-       if (NOT EXISTS "${PROJECTS_SOURCES_DIR}" AND EXISTS "${dir}")
-           set(PROJECTS_SOURCES_DIR ${dir} CACHE INTERNAL "" FORCE)
+       if (NOT EXISTS "${${PROJECT_NAME}_SOURCES_DIR}" AND EXISTS "${dir}")
+           set(${PROJECT_NAME}_SOURCES_DIR ${dir} CACHE INTERNAL "" FORCE)
            return()
        endif()
    endforeach()
@@ -55,30 +63,11 @@ set_projects_sources_directory()
 
 include("${CMAKE_DIR}/core/utils.cmake")
 
-message(STATUS "\n${CMAKE_PROJECT_NAME} Manifest:")
-message(STATUS " PROJECTS_DIR . . . . ${PROJECTS_DIR}")
-message(STATUS " ROOT_CMAKE_DIR . . . ${CMAKE_DIR}")
-message(STATUS " ROOT_PROJECT_DIR . . ${ROOT_PROJECT_DIR}")
-message(STATUS " ROOT_INCLUDE_DIR . . ${ROOT_INCLUDE_DIR}")
-message(STATUS " IS_TOPLEVEL_PROJECT: ${IS_TOPLEVEL_PROJECT}\n")
-
-set_common_include_directory("${ROOT_INCLUDE_DIR}" "called from prelude.cmake: ln:${CMAKE_CURRENT_LIST_LINE}")
-
-# if version is empty then git version is used.
-#
-macro(configure_main_project name version)
-
-   set(PRODUCT_NAME ${name})
-   
-   if(NOT DEFINED version OR "${version}" STREQUAL "")
-      set_project_info_by_git("${name}" "${PROJECT_URL}" "${PROJECT_DESCRIPTION}" "${ROOT_INCLUDE_DIR}/${name}/version.h.in")
-      string(SUBSTRING "${MY_PROJECT_VERSION}" 1 -1 GIT_VERSION_TAG)
-      set("${name}_PROJECT_VERSION" "${GIT_VERSION_TAG}")
-   else()
-      force_project_version("${version}" "${name}" "${PROJECT_URL}" "${PROJECT_DESCRIPTION}" "${ROOT_INCLUDE_DIR}/${name}/version.h.in")
-   endif()
-   
-endmacro()
+message(STATUS "\n${PROJECT_NAME} Manifest:")
+message(STATUS " ${PROJECT_NAME}_PROJECT_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS " ${PROJECT_NAME}_SOURCES_DIR: ${${PROJECT_NAME}_SOURCES_DIR}")
+message(STATUS " ${PROJECT_NAME}_INCLUDE_DIR: ${${PROJECT_NAME}_INCLUDE_DIR}")
+message(STATUS " ${PROJECT_NAME}_STANDALONE : ${${PROJECT_NAME}_STANDALONE}\n")
 
 if (EXISTS "${CMAKE_DIR}/config.cmake")
    include("${CMAKE_DIR}/config.cmake")

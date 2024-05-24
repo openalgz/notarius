@@ -15,4 +15,4 @@ project(
 
 # See: config.cmake for details.
 #
-configure_notarius()
+generate_notarius()

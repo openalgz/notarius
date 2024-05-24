@@ -3,6 +3,8 @@
 #	
 include(FetchContent)
 
+set(CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 macro(configure_boost_micro_unit_testing)
    #
    # See:  https://github.com/boost-ext/ut.git
@@ -29,7 +31,7 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
    list(REMOVE_DUPLICATES CMAKE_MODULE_PATH)
 endif()
 
-if (EXISTS "${CMAKE_DIR}/core/network.cmake")
+if (EXISTS "core/network.cmake")
    include(${CMAKE_DIR}/core/network.cmake)
    check_for_internet_connection()
 endif()
@@ -541,10 +543,10 @@ function(set_project_info project_name project_url project_description major_ver
    
    set(MY_PROJECT_VERSION ${MY_PROJECT_VERSION} CACHE INTERNAL "" FORCE)
 
-   if (EXISTS "${CURRENT_PROJECT_DIR}/include/${MY_PROJECT_NAME}/version.h.in")
-      configure_file("${CURRENT_PROJECT_DIR}/include/${MY_PROJECT_NAME}/version.h.in" "${CURRENT_PROJECT_DIR}/include/${MY_PROJECT_NAME}/version.hpp" @ONLY)      
+   if (EXISTS "${CURRENT_PROJECT_DIR}/include/${MY_PROJECT_NAME}/version.in.hpp")
+      configure_file("${CURRENT_PROJECT_DIR}/include/${MY_PROJECT_NAME}/version.in.hpp" "${CURRENT_PROJECT_DIR}/include/${MY_PROJECT_NAME}/version.hpp" @ONLY)      
    else()
-      message(FATAL_ERROR "Missing ${MY_PROJECT_NAME} Version Input: ${CURRENT_PROJECT_DIR}/include/${MY_PROJECT_NAME}/version.h.in")
+      message(FATAL_ERROR "Missing ${MY_PROJECT_NAME} Version Input: ${CURRENT_PROJECT_DIR}/include/${MY_PROJECT_NAME}/version.in.hpp")
    endif()
    
    set(GIT_VERSION_TAG ${GIT_VERSION_TAG} CACHE INTERNAL "" FORCE)
@@ -553,7 +555,7 @@ endfunction()
 
 # Tries to get a tag or branch name.
 #
-function(set_project_info_by_git project_name project_url project_description template_path)
+function(generate_git_version_include project_name project_url project_description template_path)
 
    string(TIMESTAMP CURRENT_DATE "%Y-%m-%d")
    string(SUBSTRING ${CURRENT_DATE} 2 2 YY)
@@ -608,12 +610,7 @@ function(set_project_info_by_git project_name project_url project_description te
    set(MY_PROJECT_COMPANY_URL "https://github.com/openalgz" CACHE INTERNAL "" FORCE)
    set(MY_COPYRIGHT "(c) Open Source Team Tools 2024" CACHE INTERNAL "" FORCE)
    
-   # The template file name in the template path is expected to be of the form: 'version.h.in'
-   #
-   # How this works:
-   # If template_path is /path/to/version.h.in, then output_path will be /path/to/version.hpp.
-   #
-   string(REPLACE ".in" "pp" output_path "${template_path}")
+   string(REPLACE ".in.hpp" ".hpp" output_path "${template_path}")
 
    if (EXISTS "${template_path}")
      configure_file("${template_path}" "${output_path}" @ONLY)
@@ -644,14 +641,9 @@ function(force_project_version version project_name url description template_pat
    set(MY_PROJECT_HOMEPAGE_URL "${url}" CACHE INTERNAL "" FORCE)
    set(MY_PROJECT_COMPANY_URL "https://github.com/openalgz" CACHE INTERNAL "" FORCE)
    set(MY_COPYRIGHT "(c) Open Source Team Tools 2024" CACHE INTERNAL "" FORCE)
-   
-   # The template file name in the template path is expected to be of the form: 'version.h.in'
-   #
-   # How this works:
-   # If template_path is /path/to/version.h.in, then output_path will be /path/to/version.hpp.
-   #
-   string(REPLACE ".in" "pp" output_path "${template_path}")
 
+   string(REPLACE ".in.hpp" ".hpp" output_path "${template_path}")
+   
    if (EXISTS "${template_path}")
      configure_file("${template_path}" "${output_path}" @ONLY)
    else()

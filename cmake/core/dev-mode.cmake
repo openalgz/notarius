@@ -12,6 +12,9 @@ if(BUILD_TESTING)
   add_subdirectory(src/tests)
 endif()
 
+# Note: PROJECT_SOURCE_DIR is always the root directory of the project 
+#       being configured. 
+
 # Done in developer mode only, so users won't be bothered by this :)
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/*.hpp")
 source_group(TREE "${PROJECT_SOURCE_DIR}/include" PREFIX headers FILES ${headers})
