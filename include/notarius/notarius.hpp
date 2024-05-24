@@ -227,8 +227,6 @@ namespace slx
    class notarius_t final
    {
      private:
-      size_t sum_msg_reserve{128};
-      size_t dt{0};
       std::future<void> flushing_future_;
 
      public:
@@ -380,8 +378,7 @@ namespace slx
             cs.lock();
          }
 
-         std::string msg;
-         msg.reserve((sum_msg_reserve / ++dt));
+         static thread_local std::string msg;
 
          if (logging_store_.capacity() < file_split_at_bytes_) logging_store_.reserve(file_split_at_bytes_);
 
@@ -389,8 +386,6 @@ namespace slx
             msg = std::format(fmt, std::forward<Args>(args)...);
          else
             msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
-
-         sum_msg_reserve += msg.size();
 
          if (options_.enable_stdout) {
             if (toggle_immediate_mode_ || options_.immediate_mode) {
@@ -478,8 +473,8 @@ namespace slx
             lock.lock();
          }
 
-         std::string msg;
-         msg.reserve((sum_msg_reserve / ++dt));
+         static thread_local std::string msg;
+
          if constexpr (level != log_level::none) {
             msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
          }
