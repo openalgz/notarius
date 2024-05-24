@@ -17,6 +17,8 @@
 #include <string>
 #include <type_traits>
 
+#include "io.hpp"
+
 namespace slx
 {
    /** 'string_literal' code was acquired from the glaze library: https://github.com/stephenberry/glaze.git
@@ -494,6 +496,18 @@ namespace slx
          std_flush_impl<level>(cout_buffer_, fmt, std::forward<Args>(args)...);
       }
 
+      template <log_level level = log_level::none, typename T>
+      void cout(const T& msg)
+      {
+         cout<level>("{}", msg);
+      }
+
+      template <log_level level = log_level::none, typename T>
+      void cout(T&& msg)
+      {
+         cout<level>("{}", std::forward<T>(msg));
+      }
+
       // Writes to std::cerr and then flushes
       //
       template <log_level level = log_level::none, typename... Args>
@@ -502,12 +516,36 @@ namespace slx
          std_flush_impl<level>(cerr_buffer_, fmt, std::forward<Args>(args)...);
       }
 
+      template <log_level level = log_level::none, typename T>
+      void cerr(const T& msg)
+      {
+         cerr<level>("{}", msg);
+      }
+
+      template <log_level level = log_level::none, typename T>
+      void cerr(T&& msg)
+      {
+         cerr<level>("{}", std::forward<T>(msg));
+      }
+
       // Writes to std::clog and then flushes
       //
       template <log_level level = log_level::none, typename... Args>
       void clog(std::format_string<Args...> fmt, Args&&... args)
       {
          std_flush_impl<level>(clog_buffer_, fmt, std::forward<Args>(args)...);
+      }
+
+      template <log_level level = log_level::none, typename T>
+      void clog(const T& msg)
+      {
+         clog<level>("{}", msg);
+      }
+
+      template <log_level level = log_level::none, typename T>
+      void clog(T&& msg)
+      {
+         clog<level>("{}", std::forward<T>(msg));
       }
 
       // Note:
