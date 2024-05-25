@@ -34,6 +34,7 @@ macro(suppress_compiler_warnings)
       # Suppress warning C4996 (deprecated functions)
       add_compile_options(/wd4996)
    endif()
+   add_compile_options("-Wno-#pragma-messages" "-Wbraced-scalar-init")
 endmacro()
 
 if (@SUPRESS_COMPILER_WARNING)
@@ -54,7 +55,13 @@ macro(configure_main_project name version)
 
    if(NOT DEFINED version OR "${version}" STREQUAL "")
       generate_git_version_include("${name}" "${PROJECT_URL}" "${PROJECT_DESCRIPTION}" "${include_dir}/${name}/version.in.hpp")
+      # assuming 'v' in the tag.
       string(SUBSTRING "${MY_PROJECT_VERSION}" 1 -1 GIT_VERSION_TAG)
+      string(SUBSTRING "${GIT_VERSION_TAG}" 0 1 first_char)
+      if(first_char STREQUAL ".")
+         # First char cannot be '.'
+         string(SUBSTRING "${GIT_VERSION_TAG}" 1 -1 GIT_VERSION_TAG)
+      endif()
       set("${name}_PROJECT_VERSION" "${GIT_VERSION_TAG}")
    else()
       force_project_version("${version}" "${name}" "${PROJECT_URL}" "${PROJECT_DESCRIPTION}" "${include_dir}/${name}/version.in.hpp")

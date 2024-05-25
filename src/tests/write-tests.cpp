@@ -4,7 +4,7 @@
 
 // Test options must be defined prior to 'write-tests.hpp'.
 //
-constexpr auto test_runs_to_perform = 7;
+constexpr auto test_runs_to_perform = 20;
 constexpr auto max_lines_count_ = 1000;
 
 // The following option is not available for spdlog.

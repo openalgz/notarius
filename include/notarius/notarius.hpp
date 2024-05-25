@@ -17,8 +17,6 @@
 #include <string>
 #include <type_traits>
 
-#include "io.hpp"
-
 namespace slx
 {
    /** 'string_literal' code was acquired from the glaze library: https://github.com/stephenberry/glaze.git
@@ -173,6 +171,31 @@ namespace slx
 
       ~ostream_flusher_t() { flush(); }
    };
+
+      template <int max_file_index = 100>
+      inline std::string get_next_available_filename(const std::string_view input_path_name)
+      {
+         const auto max_file_index_exceeded_msg =
+            "Warning: The max file limit of " + std::to_string(max_file_index) + " has been reached.";
+
+         if (!std::filesystem::exists(input_path_name)) return input_path_name.data();
+
+         size_t ext_pos = input_path_name.find_last_of('.');
+         std::string base_name = input_path_name.substr(0, ext_pos).data();
+         std::string extension = (ext_pos != std::string::npos) ? input_path_name.substr(ext_pos).data() : "";
+
+         size_t underscore = base_name.find_last_of('_');
+         base_name = base_name.substr(0, underscore);
+
+         for (size_t i = 1; i <= static_cast<size_t>(max_file_index); ++i) {
+            std::string tmp = fmt_string("{}_{}{}", base_name, i, extension);
+            if (!std::filesystem::exists(tmp)) {
+               return tmp;
+            }
+         }
+
+         throw std::runtime_error(max_file_index_exceeded_msg);
+      }
 
    // clang-format off
    enum class log_level : int {
@@ -382,6 +405,14 @@ namespace slx
 
          static thread_local std::string msg;
 
+         /*
+         static thread_local bool once{true};
+         if (once) {
+            once = false;
+            msg.reserve(1024);
+         }
+         */
+
          if (logging_store_.capacity() < file_split_at_bytes_) logging_store_.reserve(file_split_at_bytes_);
 
          if constexpr (log_level::none == level)
@@ -417,7 +448,7 @@ namespace slx
                if (logging_store_.size() >= file_split_at_bytes_) {
                   flush();
                   log_output_stream_.close();
-                  log_output_file_path_ = slx::io::get_next_available_filename(log_output_file_path_);
+                  log_output_file_path_ = get_next_available_filename(log_output_file_path_);
                }
             }
             if (logging_store_.size() >= flush_at_bytes_) flush_async();
@@ -476,6 +507,14 @@ namespace slx
          }
 
          static thread_local std::string msg;
+
+         /*
+         static thread_local bool once{true};
+         if (once) {
+            once = false;
+            msg.reserve(1024);
+         }
+         */
 
          if constexpr (level != log_level::none) {
             msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
