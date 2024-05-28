@@ -63,6 +63,10 @@ set_projects_sources_directory()
 
 include("${CMAKE_DIR}/core/utils.cmake")
 
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include")
+   set(${PROJECT_NAME}_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+endif()
+
 message(STATUS "\n${PROJECT_NAME} Manifest:")
 message(STATUS " ${PROJECT_NAME}_PROJECT_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS " ${PROJECT_NAME}_SOURCES_DIR: ${${PROJECT_NAME}_SOURCES_DIR}")
