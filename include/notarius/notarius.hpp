@@ -224,7 +224,7 @@ namespace slx
       }
 
       for (size_t i = 1; i <= static_cast<size_t>(max_file_index); ++i) {
-         std::string tmp = fmt_string("{}/{}_{}{}", directory, filename, i, extension);
+         std::string tmp = std::format("{}/{}_{}{}", directory, filename, i, extension);
          if (!std::filesystem::exists(tmp)) {
             return tmp;
          }
