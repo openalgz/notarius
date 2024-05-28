@@ -113,9 +113,9 @@ inline void test_notarius(const std::string& caption, int id, int max_lines_coun
          // This option is not available for spdlog and will result in
          // slightly slower logging times.
          //
-         notarius_logger << "\nUsing '<<' operator for streaming: " << caption << ":"
-                         << " Thread Id : " << id << "line " << i << ": values unint32_t: " << v3 << "; float: " << v4
-                         << "; double: " << v5 << "; string: **" << v6 << "{6}**";
+         notarius_logger << "\nUsing '<<' operator for streaming: " << caption << ":" << " Thread Id : " << id
+                         << "line " << i << ": values unint32_t: " << v3 << "; float: " << v4 << "; double: " << v5
+                         << "; string: **" << v6 << "{6}**";
       }
       else
          notarius_logger(fmt_notarius, caption, id, i, v3, v4, v5, v6);
@@ -159,7 +159,8 @@ int spdlog_vs_notarius_tests(std::string_view run, int total_test_runs_count)
    using namespace ut;
 #endif
 
-   "notarius_file_logging"_test = [&] {
+      "notarius_file_logging"_test = [&]
+   {
       slx::chrono::duration_t timer;
       for (int i = 0; i < 10; ++i) {
          test_notarius(std::string(run), i, max_lines_count_);
@@ -169,7 +170,8 @@ int spdlog_vs_notarius_tests(std::string_view run, int total_test_runs_count)
       record_tests_duration("notarius", total_test_runs_count, timer, notarius_time_result);
    };
 
-   "notarius_file_logging_async"_test = [&] {
+    "notarius_file_logging_async"_test = [&]
+   {
       slx::chrono::duration_t timer;
       for (int i = 0; i < 10; ++i) {
          test_notarius_async(std::string(run), i, max_lines_count_);
@@ -180,7 +182,8 @@ int spdlog_vs_notarius_tests(std::string_view run, int total_test_runs_count)
    };
 
 #ifdef SPDLOG
-   "spdlog_file_logging"_test = [&] {
+    "spdlog_file_logging"_test = [&]
+   {
       slx::chrono::duration_t timer;
       for (int i = 0; i < 10; ++i) {
          test_spdlog(std::string(run), i, max_lines_count_);
@@ -190,7 +193,8 @@ int spdlog_vs_notarius_tests(std::string_view run, int total_test_runs_count)
       record_tests_duration("spdlog", total_test_runs_count, timer, spdlog_time_result);
    };
 
-   "spdlog_file_logging_async"_test = [&] {
+    "spdlog_file_logging_async"_test = [&]
+   {
       slx::chrono::duration_t timer;
       for (int i = 0; i < 10; ++i) {
          test_spdlog_async(std::string(run), i, max_lines_count_);

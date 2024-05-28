@@ -10,7 +10,6 @@ namespace slx
 {
    namespace io
    {
-
       template <int max_file_index = 100>
       inline std::string& get_next_available_filename(std::string& input_path_name)
       {
@@ -46,15 +45,22 @@ namespace slx
 
          if (!std::filesystem::exists(input_path_name)) return input_path_name.data();
 
-         size_t ext_pos = input_path_name.find_last_of('.');
-         std::string base_name = input_path_name.substr(0, ext_pos).data();
-         std::string extension = (ext_pos != std::string::npos) ? input_path_name.substr(ext_pos).data() : "";
+         std::filesystem::path p = input_path_name;
+         const std::string directory = p.parent_path().string();
+         const std::string extension = p.extension().string();
+         std::string filename = p.stem().string();
 
-         size_t underscore = base_name.find_last_of('_');
-         base_name = base_name.substr(0, underscore);
+         const size_t last_underscore_pos = filename.find_last_of('_');
+         if (last_underscore_pos != std::string::npos) {
+            const std::string after_underscore = filename.substr(last_underscore_pos + 1);
+            const bool numeric = std::all_of(after_underscore.begin(), after_underscore.end(), ::isdigit);
+            if (numeric) {
+               filename.erase(last_underscore_pos);
+            }
+         }
 
          for (size_t i = 1; i <= static_cast<size_t>(max_file_index); ++i) {
-            std::string tmp = fmt_string("{}_{}{}", base_name, i, extension);
+            std::string tmp = fmt_string("{}/{}_{}{}", directory, filename, i, extension);
             if (!std::filesystem::exists(tmp)) {
                return tmp;
             }
