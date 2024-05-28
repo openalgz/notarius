@@ -636,7 +636,7 @@ namespace slx
      public:
       void flush()
       {
-        if (logging_store_.empty()) return;
+         if (logging_store_.empty()) return;
          flush_impl();
       }
 
