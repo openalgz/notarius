@@ -18,9 +18,6 @@
 - [ ] Complete Documentation
 - [ ] Support earlier versions of C++. Currently geared for C++ 20+.
 - [ ] Create test cases to evaluate all features.
-- [ ] Consider performance improvement ideas.
-- [ ] Replace `std::cout` and `std::cerr` `with fwrite` for slightly faster performance.
-- [ ] Consider spawning threads for `stdout` and `stderr`.
 - [ ] Consider adding logging sinks to enable log messages to be sent to various destinations, such as network sockets, message queues, or databases. It may be desirable to not do this in the logger itself but have a file store 'watcher' to transfer data to other destinations. In other words support a local file store that is then utilized by another process for moving the data to other destinations. 
 
 ------
