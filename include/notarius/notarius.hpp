@@ -484,15 +484,13 @@ namespace slx
          }
 
          if (options_.enable_file_logging) {
-            if (options_.split_log_files) {
-               if (logging_store_.size() >= file_split_at_bytes_) {
-                  this->flush();
-                  log_output_stream_.close();
-                  log_output_file_path_ = get_next_available_filename(log_output_file_path_);
-               }
+            if (options_.split_log_files and (logging_store_.size() >= file_split_at_bytes_)) {
+               flush_impl();
+               log_output_stream_.close();
+               log_output_file_path_ = get_next_available_filename(log_output_file_path_);
             }
             if (logging_store_.size() >= flush_at_bytes_) {
-               flush();
+               flush_impl();
             }
             logging_store_.append(std::move(msg));
          }
@@ -606,10 +604,10 @@ namespace slx
       }
 
       template <log_level level = log_level::none, typename... Args>
-      friend auto& operator<<(notarius_t<Name, Options, FileExtension>& n, Args&&... args)
+      friend auto& operator<<(notarius_t<Name, Options, FileExtension>& notarius, Args&&... args)
       {
-         n.print<level>("{}", std::forward<Args>(args)...);
-         return n;
+         notarius.print<level>("{}", std::forward<Args>(args)...);
+         return notarius;
       }
 
       void flush_impl()
@@ -624,8 +622,6 @@ namespace slx
 
          open_log_output_stream();
 
-         std::unique_lock lock(mutex_, std::try_to_lock);
-
          log_output_stream_.write(logging_store_.c_str(), logging_store_.size());
 
          log_output_stream_.flush();
@@ -637,6 +633,10 @@ namespace slx
       void flush()
       {
          if (logging_store_.empty()) return;
+         std::unique_lock cs(mutex_, std::try_to_lock);
+         if (not cs.owns_lock()) {
+            return;
+         }
          flush_impl();
       }
 
@@ -658,11 +658,8 @@ namespace slx
 
       void close()
       {
-         flush();
-         cout_buffer_.flush();
-         cerr_buffer_.flush();
-         clog_buffer_.flush();
          std::unique_lock lock(mutex_);
+         flush_impl();
          log_output_stream_.close();
       }
 
