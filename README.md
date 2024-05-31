@@ -58,7 +58,7 @@ int main() {
     lgr << "Hello, " << "World..." << 1.2f << "; " << 1.2879945 << "; " << -1 << '\n'; 
 	
     // Do not log the message, only write it to stdout, stderr, or std::clog:
-	// 
+    // 
     lgr.cout("Hello Word\n");
     lgr.cout("Hello {}\n", "World");
     
