@@ -171,7 +171,7 @@ namespace slx
             }
             else {
                if (i < 6) {
-                  std::this_thread::sleep_for(std::chrono::milliseconds(0));
+                  std::this_thread::sleep_for(std::chrono::milliseconds(10));
                }
                else {
                   std::cerr << "Warning: Could not acquire lock to append data after 7 attempts" << std::endl;
@@ -189,7 +189,7 @@ namespace slx
             }
             else {
                if (i < 6) {
-                  std::this_thread::sleep_for(std::chrono::milliseconds(0));
+                  std::this_thread::sleep_for(std::chrono::milliseconds(10));
                }
                else {
                   std::cerr << "Warning: Could not acquire lock to flush data after 7 attempts!" << std::endl;
