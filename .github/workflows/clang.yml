@@ -23,11 +23,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    # Install Clang 14 using Homebrew
-    - name: Install Clang 14
+    # Install Clang 15 using Homebrew
+    - name: Install Clang 15
       run: |
-        brew install llvm@14
-        echo "/usr/local/opt/llvm@14/bin" >> $GITHUB_PATH
+        brew install llvm@15
+        echo "/usr/local/opt/llvm@15/bin" >> $GITHUB_PATH
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}

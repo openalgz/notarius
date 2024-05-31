@@ -20,9 +20,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        gcc: [12, 13, 14]
+        gcc: [13, 14]
         build_type: [Debug, Release]
-        std: [20, 23]
+        std: [20, 23, latest]
 
     env:
       CC: gcc-${{matrix.gcc}}
