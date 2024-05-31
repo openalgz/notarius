@@ -96,8 +96,14 @@ inline void test_spdlog(const std::string& caption, int id, int max_lines_count_
 inline void test_spdlog_async(const std::string& caption, int id, int max_lines_count_)
 {
    auto log_async = [&](int i) { spdlog_logger->info(fmt_spdlog, caption, id, i, v3, v4, v5, v6); };
-   for (auto i = 0; i < max_lines_count_; ++i) {
-      auto future = std::async(std::launch::async, log_async, i);
+   std::vector<std::future<void>> futures;
+   futures.reserve(max_lines_count_);
+   for (int i = 0; i < max_lines_count_; ++i) {
+      futures.emplace_back(std::async(std::launch::async, log_async, i));
+   }
+   // Wait for all tasks to complete
+   for (auto& future : futures) {
+      future.get();
    }
 }
 #endif
@@ -125,8 +131,14 @@ inline void test_notarius(const std::string& caption, int id, int max_lines_coun
 inline void test_notarius_async(const std::string& caption, int id, int max_lines_count_)
 {
    auto log_async = [&](int i) { notarius_logger(fmt_notarius, caption, id, i, v3, v4, v5, v6); };
-   for (auto i = 0; i < max_lines_count_; ++i) {
-      auto future = std::async(std::launch::async, log_async, i);
+   std::vector<std::future<void>> futures;
+   futures.reserve(max_lines_count_);
+   for (int i = 0; i < max_lines_count_; ++i) {
+      futures.emplace_back(std::async(std::launch::async, log_async, i));
+   }
+   // Wait for all tasks to complete
+   for (auto& future : futures) {
+      future.get();
    }
 }
 

@@ -457,7 +457,7 @@ namespace slx
          if (not options_.lock_free_enabled) {
             cs.lock();
          }
-
+       
          static thread_local std::string msg;
 
          if (logging_store_.capacity() < file_split_at_bytes_) logging_store_.reserve(file_split_at_bytes_);
