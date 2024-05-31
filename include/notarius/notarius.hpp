@@ -542,6 +542,7 @@ namespace slx
       template <bool flush = true, log_level level = log_level::none, typename... Args>
       void cout(std::format_string<Args...> fmt, Args&&... args)
       {
+         if (not options_.enable_stdout) return;
          update_io_buffer<flush, level>(cout_buffer_, fmt, std::forward<Args>(args)...);
       }
 
@@ -555,7 +556,7 @@ namespace slx
       template <bool flush = true, log_level level = log_level::none, typename T>
       void cout(T&& msg)
       {
-         if (options_.enable_stdout) return;
+         if (not options_.enable_stdout) return;
          cout<flush, level>("{}", std::forward<T>(msg));
       }
 
@@ -564,42 +565,42 @@ namespace slx
       template <bool flush = true, log_level level = log_level::none, typename... Args>
       void cerr(std::format_string<Args...> fmt, Args&&... args)
       {
-         if (options_.enable_stderr) return;
+         if (not options_.enable_stderr) return;
          update_io_buffer<flush, level>(cerr_buffer_, fmt, std::forward<Args>(args)...);
       }
 
       template <bool flush = true, log_level level = log_level::none, typename T>
       void cerr(const T& msg)
       {
-         if (options_.enable_stderr) return;
+         if (not options_.enable_stderr) return;
          cerr<flush, level>("{}", msg);
       }
 
       template <bool flush = true, log_level level = log_level::none, typename T>
       void cerr(T&& msg)
       {
-         if (options_.enable_stderr) return;
+         if (not options_.enable_stderr) return;
          cerr<flush, level>("{}", std::forward<T>(msg));
       }
 
       template <bool flush = true, log_level level = log_level::none, typename... Args>
       void clog(std::format_string<Args...> fmt, Args&&... args)
       {
-         if (options_.enable_stdlog) return;
+         if (not options_.enable_stdlog) return;
          update_io_buffer<flush, level>(clog_buffer_, fmt, std::forward<Args>(args)...);
       }
 
       template <bool flush = true, log_level level = log_level::none, typename T>
       void clog(const T& msg)
       {
-         if (options_.enable_stdlog) return;
+         if (not options_.enable_stdlog) return;
          clog<flush, level>("{}", msg);
       }
 
       template <bool flush = true, log_level level = log_level::none, typename T>
       void clog(T&& msg)
       {
-         if (options_.enable_stdlog) return;
+         if (not options_.enable_stdlog) return;
          clog<flush, level>("{}", std::forward<T>(msg));
       }
 
