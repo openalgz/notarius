@@ -1,4 +1,6 @@
-# notarius, A Fast and Simple C++ Logging Library
+# notarius
+
+### A Fast and Simple C++ Logging Library
 
 > [!NOTE]
 >
@@ -8,7 +10,7 @@
 >
 > - It should remain header only.
 >- Fast (see spdlog test comparison)
-> - Easy to use (e.g., easy of configurability of logging instances and the implementation of source code should be easy to read and understand).
+> - Easy to use (e.g., easy configurability of logging instances, and, the implementation of the source code should be easy to read and understand).
 > - Thread safety that can be turned off when not required.
 
 ------
@@ -22,7 +24,7 @@
 
 ------
 
-Notarius is a header-only C++ logging library that provides a flexible and efficient way to handle logging in your applications. It offers the following features:
+Notarius is a header-only (the only header dependencies should come from the STL) C++ logging library that provides a flexible and efficient way to handle logging in your applications. It offers the following features:
 
 - **Log Levels**: Supports different log levels (none, info, warn, error, exception) for controlling the verbosity of logging.
 - **Output Streams**: Allows logging to multiple output streams, including stdout, stderr, and file. Each of these features may be enabled or disabled. 
@@ -39,19 +41,32 @@ To use the Notarius logging library, simply include the `notarius.hpp` header fi
 ```cpp
 #include "notarius.hpp"
 
-// Create a log file name 'my-logger' using the default notarius options with the 
+// Create a log file name 'lgr' using the default notarius options with the 
 // Markdown extension md.
 //
-inline slx::notarius_t < "my-logger", slx::notarius_opts{}, "md" > my_logger;
+inline slx::notarius_t < "lgr", slx::notarius_opts{}, "md" > my_logger;
 
 int main() {
     
-    my_logger("Hello, World!\n");
-    my_logger.print("Hello, World!\n");
-    my_logger.print("Hello, World! **Numbers:** {}, {}, {}\n", 1.2f, 1.2879945, -1);
-    my_logger.print<slx::log_level::info>("This is an info message.\n");
-    my_logger.print<slx::log_level::error>("An error occurred: {}\n", error_message);
-    my_logger << "Hello, " << "World..." << 1.2f << "; " << 1.2879945 << "; " << -1 << '\n'; 
+    // All functions may be enabled or disabled at runtime.
+    //
+    lgr("Hello, World!\n");
+    lgr.print("Hello, World!\n");
+    lgr.print("Hello, World! **Numbers:** {}, {}, {}\n", 1.2f, 1.2879945, -1);
+    lgr.print<slx::log_level::info>("This is an info message.\n");
+    lgr.print<slx::log_level::error>("An error occurred: {}\n", error_message);
+    lgr << "Hello, " << "World..." << 1.2f << "; " << 1.2879945 << "; " << -1 << '\n'; 
+	
+    // Do not log the message, only write it to stdout, stderr, or std::clog:
+	// 
+    lgr.cout("Hello Word\n");
+    lgr.cout("Hello {}\n", "World");
+    
+    lgr.pause_stderr();  // Pause lgr.cerr output 
+    lgr.cerr("There were {} {}\n", 5, "errors."); // this call is ignored.
+    lgr.enable_stderr(); // Enable stderr once again.
+    
+    lgr.clog("This will go to std::clog {}", "...");
 
     return 0;
 }
@@ -78,10 +93,6 @@ Refer to the code documentation for more details on available options and usage 
 The `notarius::write` method is used to log a message immediately to the console (`stdout` or `stderr`) vs caching the string to be written later when the `ostream_buffer` reaches its defined capacity. This way you can use caching to speed up console output but also having the ability to forcing critical outputs to be displayed right away.
 
 ```cpp
-ostream_flusher_t</*capacity:*/ 512> ostream_buffer_{ .ostream_ptr_ = &ostream_ptr_ };
-.
-.
-.
 template <log_level level = log_level::none, typename... Args>
 auto write(std::format_string<Args...> fmt, Args&&... args) {
     toggle_immediate_mode(); // Enable immediate mode for this log
