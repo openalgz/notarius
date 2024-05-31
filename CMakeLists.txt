@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-include("cmake/core/prelude.cmake")
+include("cmake/prelude.cmake")
 
 configure_main_project("notarius" "") # blank to aquire/assign version from the git repo
                                       # yy.mm.dd is used if the repo does not have a 
@@ -8,7 +8,7 @@ configure_main_project("notarius" "") # blank to aquire/assign version from the 
                                       # to '1.0.0', etc.
                                       
 project(
-   ${PRODUCT_NAME}
+   ${PROJECT_NAME}
    VERSION "${notarius_PROJECT_VERSION}"
    LANGUAGES CXX
 )

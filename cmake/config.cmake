@@ -30,11 +30,11 @@ macro(generate_notarius)
 endmacro()
 
 macro(suppress_compiler_warnings)
-   if(MSVC)
-      # Suppress warning C4996 (deprecated functions)
-      add_compile_options(/wd4996)
-   elseif(UNIX)
-      add_compile_options("-Wno-#pragma-messages" "-Wbraced-scalar-init")
+   if (MSVC)
+      target_compile_options(spdlog PRIVATE /W0)
+      add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS)
+   elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU")
+      target_compile_options(spdlog PRIVATE -w)
    endif()
 endmacro()
 
@@ -45,8 +45,6 @@ endif()
 # if version is empty then git version is used.
 #
 macro(configure_main_project name version)
-
-   set(PRODUCT_NAME ${name})
 
    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include")
       set(${PROJECT_NAME}_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" CACHE INTERNAL "" FORCE)

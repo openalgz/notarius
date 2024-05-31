@@ -1,7 +1,3 @@
-set(PROJECT_NAME "notarius")
-
-set(CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
 # ---- In-source guard ----
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(

@@ -290,7 +290,7 @@ namespace slx
       static constexpr std::string_view file_name_v{Name};
       static constexpr std::string_view file_extension_v{FileExtension};
 
-      std::mutex mutex_;
+      mutable std::mutex mutex_; // mutable for const functions.
 
       notarius_opts_t options_{Options};
 
@@ -684,6 +684,33 @@ namespace slx
       }
 
       auto size() const { return logging_store_.size(); }
+
+      bool rdbuf(std::string& buffer)
+      {
+         try {
+            close();
+            const auto file_path = log_path();
+            std::ifstream log_buf(file_path.data());
+            if (!log_buf) {
+               return false;
+            }
+            std::ostringstream os;
+            os << log_buf.rdbuf();
+            buffer = os.str();
+         }
+         catch (...) {
+            return false;
+         }
+
+         return true;
+      }
+
+      std::string rdbuf()
+      {
+         std::string b;
+         rdbuf(b);
+         return b;
+      }
 
       void clear()
       {
