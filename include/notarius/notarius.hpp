@@ -136,7 +136,7 @@ namespace slx
 
       bool append_impl(std::string_view sv)
       {
-         std::unique_lock<std::mutex> lock(mutex_, std::defer_lock);
+         std::unique_lock lock(mutex_, std::defer_lock);
          if (lock.try_lock()) {
             memory_buffer_.append(sv);
             if (memory_buffer_.size() >= Capacity) {
@@ -287,6 +287,7 @@ namespace slx
              slx::string_literal FileExtension = "log">
    struct notarius_t final
    {
+     private:
       static constexpr std::string_view file_name_v{Name};
       static constexpr std::string_view file_extension_v{FileExtension};
 
@@ -308,19 +309,16 @@ namespace slx
 
       std::string log_output_file_path_{create_output_path(file_name_v, file_extension_v)};
 
-      auto logfile_path() const { return log_output_file_path_; }
-
-     private:
       // Flush the logging store to the ostream when it reaches this capacity.
       //
       size_t flush_at_bytes_{Options.split_max_log_file_size_bytes_ / 2};
 
       size_t file_split_at_bytes_{Options.split_max_log_file_size_bytes_};
 
-      // toggle writing to the ostream on/logging_off at some logging point in your code.
+      // Toggle writing to the ostream on/logging_off at some logging point in your code.
       bool toggle_immediate_mode_ = {false};
 
-      // enable/disable flushing to a log file
+      // Enable/disable flushing to a log file
       bool flush_to_log_file_{true};
 
       template <bool flush, log_level level, typename... Args>
@@ -349,7 +347,21 @@ namespace slx
          }
       }
 
+      void flush_impl()
+      {
+         cout_buffer_.flush();
+         cerr_buffer_.flush();
+         clog_buffer_.flush();
+         if (logging_store_.empty()) return;
+         open_log_output_stream();
+         log_output_stream_.write(logging_store_.c_str(), logging_store_.size());
+         log_output_stream_.flush();
+         logging_store_.clear();
+      };
+
      public:
+      auto logfile_path() const { return log_output_file_path_; }
+
       void pause_file_logging()
       {
          std::unique_lock lock(mutex_);
@@ -425,10 +437,10 @@ namespace slx
          return p;
       }
 
-      inline void open_log_output_stream()
+      inline bool open_log_output_stream()
       {
          if (not options_.enable_file_logging) {
-            return;
+            return false;
          }
 
          check_log_file_path();
@@ -445,27 +457,31 @@ namespace slx
             throw std::system_error(
                ec, std::format("Error opening log file '{}' (error code: {})!", log_output_file_path_, ec.message()));
          }
+
+         return log_output_stream_.is_open();
       }
+
+      bool is_open() const { return log_output_stream_.is_open(); }
 
       // See: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2508r1.html
       //
       template <log_level level = log_level::none, typename... Args>
       void print(std::format_string<Args...> fmt, Args&&... args)
       {
+         static thread_local std::string msg;
+
+         if constexpr (log_level::none == level)
+            msg = std::format(fmt, std::forward<Args>(args)...);
+         else
+            msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
+
          std::unique_lock cs(mutex_, std::defer_lock);
 
          if (not options_.lock_free_enabled) {
             cs.lock();
          }
 
-         static thread_local std::string msg;
-
          if (logging_store_.capacity() < file_split_at_bytes_) logging_store_.reserve(file_split_at_bytes_);
-
-         if constexpr (log_level::none == level)
-            msg = std::format(fmt, std::forward<Args>(args)...);
-         else
-            msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
 
          if (toggle_immediate_mode_ || options_.immediate_mode) {
             toggle_immediate_mode_ = false;
@@ -611,26 +627,6 @@ namespace slx
          return notarius;
       }
 
-      void flush_impl()
-      {
-         cout_buffer_.flush();
-
-         cerr_buffer_.flush();
-
-         clog_buffer_.flush();
-
-         if (logging_store_.empty()) return;
-
-         open_log_output_stream();
-
-         log_output_stream_.write(logging_store_.c_str(), logging_store_.size());
-
-         log_output_stream_.flush();
-
-         logging_store_.clear();
-      };
-
-     public:
       void flush()
       {
          if (logging_store_.empty()) return;
