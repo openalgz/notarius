@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "ms-vscode.cpptools-extension-pack",
+    "matepek.vscode-catch2-test-adapter",
+    "xaver.clang-format",
+    "ms-vscode.cpptools",
+    "ms-vscode.cmake-tools",
+    "vadimcn.vscode-lldb",
+    "cschlosser.doxdocgen",
+    "austin.code-gnu-global",
+    "eamodio.gitlens",
+    "secanis.jinja-templates"
+  ]
+}
