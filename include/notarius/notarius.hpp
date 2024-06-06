@@ -204,7 +204,7 @@ namespace slx
 
       // The max allowable size of a log file (this is ignored when 'split_log_files' is false).
       //
-      size_t split_log_file_at_size_bytes{1'048'576*50}; // 1MB
+      size_t split_log_file_at_size_bytes{1'048'576 * 50}; // 1MB
 
       size_t flush_to_log_at_bytes{1'048'576 * 50};
    };
@@ -323,11 +323,10 @@ namespace slx
             }
          }
 
-        if (toggle_immediate_mode_ || options_.immediate_mode) {
+         if (toggle_immediate_mode_ || options_.immediate_mode) {
             toggle_immediate_mode_ = false;
             flush_std_outputs();
          }
-
       }
 
       void flush_impl()
@@ -475,9 +474,8 @@ namespace slx
       template <log_level level = log_level::none, typename... Args>
       void print(std::format_string<Args...> fmt, Args&&... args)
       {
-
          std::unique_lock cs(mutex_, std::defer_lock);
-        
+
          if (not options_.lock_free_enabled) {
             cs.lock();
          }
