@@ -14,12 +14,11 @@ set(PROJECT_URL "https://github.com/openalgz/notarius" CACHE INTERNAL "")
 
 # Set Dependencies Here:
 #
-list(APPEND PROJECT_DEPENDENCIES_LIST "spdlog, https://github.com/gabime/spdlog.git, v1.13.0")
-list(APPEND PROJECT_DEPENDENCIES_LIST "ut,     https://github.com/boost-ext/ut.git,  v2.0.1")
-
 macro(generate_notarius)
 
    if (PROJECT_IS_TOP_LEVEL)
+      list(APPEND PROJECT_DEPENDENCIES_LIST "spdlog, https://github.com/gabime/spdlog.git, v1.13.0")
+      list(APPEND PROJECT_DEPENDENCIES_LIST "ut,     https://github.com/boost-ext/ut.git,  v2.0.1")
       configure_boost_micro_unit_testing()
       fetch_content_and_make_available("${PROJECT_DEPENDENCIES_LIST}")   
       include("${CMAKE_DIR}/core/dev-mode.cmake")
