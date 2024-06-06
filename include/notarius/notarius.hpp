@@ -118,89 +118,6 @@ namespace slx
    template <typename T>
    concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
 
-   template <is_standard_ostream T, size_t Capacity = 512>
-   struct ostream_flusher_t final
-   {
-      T& ostream_;
-      std::string memory_buffer_;
-      std::mutex mutex_;
-      std::future<void> flushing_future_;
-
-      ostream_flusher_t(T& ostream) : ostream_(ostream) { memory_buffer_.reserve(Capacity); }
-
-      constexpr size_t capacity() const { return memory_buffer_.capacity(); }
-
-      size_t size() const { return memory_buffer_.size(); }
-
-      static inline void disable_sync_with_stdio() { std::ios::sync_with_stdio(false); }
-
-      bool append_impl(std::string_view sv)
-      {
-         std::unique_lock lock(mutex_, std::defer_lock);
-         if (lock.try_lock()) {
-            memory_buffer_.append(sv);
-            if (memory_buffer_.size() >= Capacity) {
-               ostream_ << memory_buffer_;
-               ostream_.flush();
-               memory_buffer_.clear();
-            }
-            return true;
-         }
-         return false;
-      }
-
-      bool flush_impl()
-      {
-         if (memory_buffer_.empty()) return true;
-         std::unique_lock lock(mutex_, std::defer_lock);
-         if (lock.try_lock()) {
-            ostream_ << memory_buffer_;
-            ostream_.flush();
-            memory_buffer_.clear();
-            return true;
-         }
-         return false;
-      }
-
-     public:
-      ostream_flusher_t& append(std::string_view sv)
-      {
-         for (short i = 0; i < 7; ++i) {
-            if (append_impl(sv)) {
-               return *this;
-            }
-            else {
-               if (i < 6) {
-                  std::this_thread::sleep_for(std::chrono::milliseconds(10));
-               }
-               else {
-                  std::cerr << "Warning: Could not acquire lock to append data after 7 attempts" << std::endl;
-               }
-            }
-         }
-         return *this;
-      }
-
-      void flush()
-      {
-         for (short i = 0; i < 7; ++i) {
-            if (flush_impl()) {
-               return;
-            }
-            else {
-               if (i < 6) {
-                  std::this_thread::sleep_for(std::chrono::milliseconds(10));
-               }
-               else {
-                  std::cerr << "Warning: Could not acquire lock to flush data after 7 attempts!" << std::endl;
-               }
-            }
-         }
-      }
-
-      ~ostream_flusher_t() { flush(); }
-   };
-
    template <int max_file_index = 100>
    inline std::string get_next_available_filename(const std::string_view input_path_name)
    {
@@ -240,13 +157,14 @@ namespace slx
       warn,        // etc.
       error,
       exception,
+      count // Sentinel value
    };
    // clang-format on
 
    inline constexpr const char* to_string(const log_level level)
    {
-      constexpr std::array<const char*, 6> log_strings = {
-         "logging_off:", /*none:*/ "", "info: ", "warn: ", "error: ", "exception: "};
+      constexpr std::array<const char*, static_cast<int>(log_level::count)> log_strings = {
+         /*none:*/ "", "info: ", "warn: ", "error: ", "exception: "};
       if (int(level) >= log_strings.size()) return "";
       return log_strings[int(level)];
    }
@@ -264,23 +182,31 @@ namespace slx
       //
       bool immediate_mode{false};
 
-      bool enable_stdout{false};
+      bool enable_stdout{true};
 
-      bool enable_stderr{false};
+      bool enable_stderr{true};
 
-      bool enable_stdlog{false};
+      bool enable_stdlog{true};
 
-      bool enable_file_logging{true};
+      bool enable_file_logging{false};
 
       bool append_to_log{true};
+
+      bool append_newline_when_missing{false};
 
       // Split log files when they get to a certain size.
       //
       bool split_log_files{true};
 
+      // flush to stdout, err, or clog when this size is exceeded
+      //
+      size_t flush_to_std_outputs_at_bytes{1024};
+
       // The max allowable size of a log file (this is ignored when 'split_log_files' is false).
       //
-      size_t split_max_log_file_size_bytes_{2'097'152}; // ~2MB
+      size_t split_log_file_at_size_bytes{1'048'576*50}; // 1MB
+
+      size_t flush_to_log_at_bytes{1'048'576 * 50};
    };
 
    template <slx::string_literal Name = "", notarius_opts_t Options = notarius_opts_t{},
@@ -293,27 +219,39 @@ namespace slx
 
       mutable std::mutex mutex_; // mutable for const functions.
 
-      notarius_opts_t options_{Options};
-
-      ostream_flusher_t<std::ostream&, 512> cout_buffer_{std::cout};
-      ostream_flusher_t<std::ostream&, 512> cerr_buffer_{std::cerr};
-      ostream_flusher_t<std::ostream&, 512> clog_buffer_{std::clog};
-
       // The logging store.
       // using std::string as the store is slightly faster:
       // std::deque<std::string> logging_store_;
       //
       std::string logging_store_;
 
+      // TODO: Try to improve this!
+      std::string cout_store_;
+      std::string cerr_store_;
+      std::string clog_store_;
+
+      void reserve_store_capacities()
+      {
+         if (logging_store_.capacity() < options_.split_log_file_at_size_bytes) {
+            logging_store_.reserve(options_.split_log_file_at_size_bytes);
+         }
+
+         if (cout_store_.capacity() < options_.flush_to_std_outputs_at_bytes) {
+            cout_store_.reserve(options_.flush_to_std_outputs_at_bytes);
+         }
+
+         if (cerr_store_.capacity() < options_.flush_to_std_outputs_at_bytes) {
+            cerr_store_.reserve(options_.flush_to_std_outputs_at_bytes);
+         }
+
+         if (cout_store_.capacity() < options_.flush_to_std_outputs_at_bytes) {
+            cerr_store_.reserve(options_.flush_to_std_outputs_at_bytes);
+         }
+      }
+
       std::ofstream log_output_stream_;
 
       std::string log_output_file_path_{create_output_path(file_name_v, file_extension_v)};
-
-      // Flush the logging store to the ostream when it reaches this capacity.
-      //
-      size_t flush_at_bytes_{Options.split_max_log_file_size_bytes_ / 2};
-
-      size_t file_split_at_bytes_{Options.split_max_log_file_size_bytes_};
 
       // Toggle writing to the ostream on/logging_off at some logging point in your code.
       bool toggle_immediate_mode_ = {false};
@@ -321,45 +259,114 @@ namespace slx
       // Enable/disable flushing to a log file
       bool flush_to_log_file_{true};
 
-      template <bool flush, log_level level, typename... Args>
-      void update_io_buffer(ostream_flusher_t<std::ostream&, 512>& buffer, std::format_string<Args...> fmt,
-                            Args&&... args)
+      notarius_opts_t options_{Options};
+
+      void flush_cout()
+      {
+         if (cout_store_.empty()) return;
+         std::cout << cout_store_;
+         cout_store_.clear();
+         std::cout.flush();
+      }
+
+      void flush_cerr()
+      {
+         if (cerr_store_.empty()) return;
+         std::cerr << cerr_store_;
+         cerr_store_.clear();
+         std::cerr.flush();
+      }
+
+      void flush_clog()
+      {
+         if (clog_store_.empty()) return;
+         std::clog << clog_store_;
+         clog_store_.clear();
+         std::clog.flush();
+      }
+
+      void flush_std_outputs()
+      {
+         flush_cout();
+         flush_cerr();
+         flush_clog();
+      }
+
+      void write_to_std_output_stores(const std::string& msg, log_level level)
+      {
+         if (not options_.enable_stdout and not options_.enable_stderr and not options_.enable_stdlog) return;
+
+         if (options_.enable_stdout && level <= log_level::warn) {
+            if (cout_store_.size() >= options_.flush_to_std_outputs_at_bytes) {
+               flush_cout();
+            }
+            else {
+               cout_store_.append(msg);
+            }
+         }
+
+         if (options_.enable_stderr && level >= log_level::error) {
+            if (cerr_store_.size() >= options_.flush_to_std_outputs_at_bytes) {
+               flush_cerr();
+            }
+            else {
+               cerr_store_.append(msg);
+            }
+         }
+
+         if (options_.enable_stdlog) {
+            if (clog_store_.size() >= options_.flush_to_std_outputs_at_bytes) {
+               flush_clog();
+            }
+            else {
+               clog_store_.append(msg);
+            }
+         }
+
+        if (toggle_immediate_mode_ || options_.immediate_mode) {
+            toggle_immediate_mode_ = false;
+            flush_std_outputs();
+         }
+
+      }
+
+      void flush_impl()
+      {
+         flush_std_outputs();
+
+         if (logging_store_.empty()) return;
+
+         if (options_.enable_file_logging) {
+            open_log_output_stream();
+            log_output_stream_.write(logging_store_.c_str(), logging_store_.size());
+            log_output_stream_.flush();
+         }
+
+         logging_store_.clear();
+      };
+
+      template <log_level level, bool flush = true, typename... Args>
+      void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
       {
          static thread_local std::string msg;
+
          if constexpr (level != log_level::none) {
             msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
          }
          else {
             msg = std::format(fmt, std::forward<Args>(args)...);
          }
-         buffer.append(msg);
-         if constexpr (flush) {
-            buffer.flush();
-         }
-      }
 
-      template <bool flush, log_level level>
-      void update_io_buffer_v(ostream_flusher_t<std::ostream&, 512>& buffer, std::string_view msg)
-      {
-         buffer.append(msg);
-         if constexpr (flush) {
-            buffer.flush();
-         }
-      }
+         buffer << msg;
 
-      void flush_impl()
-      {
-         cout_buffer_.flush();
-         cerr_buffer_.flush();
-         clog_buffer_.flush();
-         if (logging_store_.empty()) return;
-         open_log_output_stream();
-         log_output_stream_.write(logging_store_.c_str(), logging_store_.size());
-         log_output_stream_.flush();
-         logging_store_.clear();
-      };
+         buffer.flush();
+
+         msg.clear();
+      }
 
      public:
+      auto& options() { return options_; }
+
       auto logfile_path() const { return log_output_file_path_; }
 
       void pause_file_logging()
@@ -468,48 +475,52 @@ namespace slx
       template <log_level level = log_level::none, typename... Args>
       void print(std::format_string<Args...> fmt, Args&&... args)
       {
+
+         std::unique_lock cs(mutex_, std::defer_lock);
+        
+         if (not options_.lock_free_enabled) {
+            cs.lock();
+         }
+
          static thread_local std::string msg;
+
+         static bool reserve_once{true};
+
+         // TODO: Check if really needed.
+         //
+         if (reserve_once) {
+            reserve_once = false;
+            reserve_store_capacities();
+         }
 
          if constexpr (log_level::none == level)
             msg = std::format(fmt, std::forward<Args>(args)...);
          else
             msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
 
-         std::unique_lock cs(mutex_, std::defer_lock);
-
-         if (not options_.lock_free_enabled) {
-            cs.lock();
-         }
-
-         if (logging_store_.capacity() < file_split_at_bytes_) logging_store_.reserve(file_split_at_bytes_);
-
-         if (toggle_immediate_mode_ || options_.immediate_mode) {
-            toggle_immediate_mode_ = false;
-
-            if (options_.enable_stdout and level < log_level::error) {
-               update_io_buffer_v<true, level>(cout_buffer_, msg);
-            }
-
-            if (options_.enable_stderr and level > log_level::warn) {
-               update_io_buffer_v<true, level>(cerr_buffer_, msg);
-            }
-
-            if (options_.enable_stdlog) {
-               update_io_buffer_v<true, level>(clog_buffer_, msg);
+         if (options_.append_newline_when_missing) {
+            if (not msg.empty() and '\n' != msg.back()) {
+               msg.append("\n");
             }
          }
 
-         if (options_.enable_file_logging) {
-            if (options_.split_log_files and (logging_store_.size() >= file_split_at_bytes_)) {
-               flush_impl();
+         write_to_std_output_stores(msg, level);
+
+         const size_t check_size = logging_store_.size() + msg.size();
+
+         if (options_.split_log_files and (check_size >= options_.split_log_file_at_size_bytes)) {
+            flush_impl();
+            if (options_.enable_file_logging) {
                log_output_stream_.close();
                log_output_file_path_ = get_next_available_filename(log_output_file_path_);
             }
-            if (logging_store_.size() >= flush_at_bytes_) {
-               flush_impl();
-            }
-            logging_store_.append(std::move(msg));
          }
+
+         if (logging_store_.size() >= options_.flush_to_log_at_bytes) {
+            flush_impl();
+         }
+
+         logging_store_.append({msg});
 
          return;
       }
@@ -555,69 +566,69 @@ namespace slx
 
       // Writes to std::cout and then flushes
       //
-      template <bool flush = true, log_level level = log_level::none, typename... Args>
+      template <log_level level = log_level::none, bool flush = true, typename... Args>
       void cout(std::format_string<Args...> fmt, Args&&... args)
       {
          if (not options_.enable_stdout) return;
-         update_io_buffer<flush, level>(cout_buffer_, fmt, std::forward<Args>(args)...);
+         update_io_buffer<level, flush>(std::cout, fmt, std::forward<Args>(args)...);
       }
 
-      template <bool flush = true, log_level level = log_level::none, typename T>
+      template <log_level level = log_level::none, bool flush = true, typename T>
       void cout(const T& msg)
       {
          if (not options_.enable_stdout) return;
-         cout<flush, level>("{}", msg);
+         cout<level, flush>("{}", msg);
       }
 
-      template <bool flush = true, log_level level = log_level::none, typename T>
+      template <log_level level = log_level::none, bool flush = true, typename T>
       void cout(T&& msg)
       {
          if (not options_.enable_stdout) return;
-         cout<flush, level>("{}", std::forward<T>(msg));
+         cout<level, flush>("{}", std::forward<T>(msg));
       }
 
       // Writes to std::cerr and then flushes
       //
-      template <bool flush = true, log_level level = log_level::none, typename... Args>
+      template <log_level level = log_level::none, bool flush = true, typename... Args>
       void cerr(std::format_string<Args...> fmt, Args&&... args)
       {
          if (not options_.enable_stderr) return;
-         update_io_buffer<flush, level>(cerr_buffer_, fmt, std::forward<Args>(args)...);
+         update_io_buffer<level, flush>(std::cerr, fmt, std::forward<Args>(args)...);
       }
 
-      template <bool flush = true, log_level level = log_level::none, typename T>
+      template <log_level level = log_level::none, bool flush = true, typename T>
       void cerr(const T& msg)
       {
          if (not options_.enable_stderr) return;
-         cerr<flush, level>("{}", msg);
+         cerr<level, flush>("{}", msg);
       }
 
-      template <bool flush = true, log_level level = log_level::none, typename T>
+      template <log_level level = log_level::none, bool flush = true, typename T>
       void cerr(T&& msg)
       {
          if (not options_.enable_stderr) return;
-         cerr<flush, level>("{}", std::forward<T>(msg));
+         cerr<level, flush>("{}", std::forward<T>(msg));
       }
 
-      template <bool flush = true, log_level level = log_level::none, typename... Args>
+      template <log_level level = log_level::none, bool flush = true, typename... Args>
       void clog(std::format_string<Args...> fmt, Args&&... args)
       {
          if (not options_.enable_stdlog) return;
-         update_io_buffer<flush, level>(clog_buffer_, fmt, std::forward<Args>(args)...);
+         update_io_buffer<level, flush>(std::clog, fmt, std::forward<Args>(args)...);
       }
 
-      template <bool flush = true, log_level level = log_level::none, typename T>
+      template <log_level level = log_level::none, bool flush = true, typename T>
       void clog(const T& msg)
       {
          if (not options_.enable_stdlog) return;
-         clog<flush, level>("{}", msg);
+         clog<level, flush>("{}", msg);
       }
 
-      template <bool flush = true, log_level level = log_level::none, typename T>
+      template <log_level level = log_level::none, bool flush = true, typename T>
       void clog(T&& msg)
       {
          if (not options_.enable_stdlog) return;
-         clog<flush, level>("{}", std::forward<T>(msg));
+         clog<level, flush>("{}", std::forward<T>(msg));
       }
 
       template <log_level level = log_level::none, typename... Args>
@@ -716,7 +727,7 @@ namespace slx
 
       // Capacity at which the logging buffer will be forced to flush.
       //
-      auto capacity() const { return flush_at_bytes_; }
+      auto capacity() const { return logging_store_.capacity(); }
 
       const std::string_view log_path() const
       {
