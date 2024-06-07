@@ -97,7 +97,7 @@ function(set_common_include_directory directories called_from)
    endforeach()
    
    get_property(include_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
-   list(APPEND tmp ${tmp_directories} ${include_dirs} ${COMMON_INCLUDE_DIRS})
+   list(APPEND tmp ${tmp_directories} ${include_dirs} ${make_header_only_project} ${COMMON_INCLUDE_DIRS})
    string(REPLACE ";;" ";" tmp "${tmp}")
    list(REMOVE_DUPLICATES tmp)
    foreach (dir ${tmp})
@@ -159,6 +159,68 @@ function(set_optional_link_library libraries)
    list(REMOVE_DUPLICATES tmp)
    set(OPTIONAL_LINK_LIBRARIES "${tmp}" CACHE INTERNAL "A list of target link core libraries." FORCE)
 endfunction()
+
+macro(group_project_files)
+   
+    file(GLOB_RECURSE HEADER_FILES
+        "${PROJECT_SOURCE_DIR}/*.h"
+        "${PROJECT_SOURCE_DIR}/*.hh"
+        "${PROJECT_SOURCE_DIR}/*.hpp")
+
+    file(GLOB_RECURSE SOURCE_FILES
+        "${PROJECT_SOURCE_DIR}/*.c"
+        "${PROJECT_SOURCE_DIR}/*.cc"
+        "${PROJECT_SOURCE_DIR}/*.cpp")
+
+    message(STATUS "  Source files:")
+    foreach(FILE ${SOURCE_FILES})
+        message(STATUS "    ${FILE}")
+    endforeach()
+
+    message(STATUS "  Include files:")
+    foreach(FILE ${HEADER_FILES})
+        message(STATUS "    ${FILE}")
+    endforeach()
+
+    list(APPEND ide_grouping ${SOURCE_FILES} ${HEADER_FILES} ${COMMON_INCLUDE_DIRS})
+endmacro()
+
+#[[
+   **Example:**
+   ```C++
+      set(files_to_group
+            platform/class.cpp
+            platform/class.hpp
+            core/another_class.hpp
+         )
+      create_common_source_group_structure("${files_to_group}")
+   ```
+#]]
+macro(create_common_source_group_structure files_to_group)
+    foreach(FILE ${files_to_group})
+        get_filename_component(PARENT_DIR "${FILE}" PATH)
+        get_filename_component(PARENT_DIR "${PARENT_DIR}" NAME)
+        string(REPLACE "/" "\\" GROUP "${PARENT_DIR}")
+        if ("${FILE}" MATCHES ".*\\.(c|cpp|cxx)$")
+            set(GROUP "src\\${GROUP}")
+        elseif("${FILE}" MATCHES ".*\\.(h|hpp|hxx)$")
+            set(GROUP "include\\${GROUP}")
+        endif()
+        source_group("${GROUP}" FILES "${FILE}")
+    endforeach()
+endmacro()
+
+macro(create_common_header_group_structure files_to_group)
+    foreach(FILE ${files_to_group})
+        get_filename_component(PARENT_DIR "${FILE}" PATH)
+        get_filename_component(PARENT_DIR "${PARENT_DIR}" NAME)
+        string(REPLACE "/" "\\" GROUP "${PARENT_DIR}")
+        if("${FILE}" MATCHES ".*\\.(h|hpp|hxx)$")
+            set(GROUP "include\\${GROUP}")
+        endif()
+        source_group("${GROUP}" FILES "${FILE}")
+    endforeach()
+endmacro()
 
 
 ## TODO: Make function/macro to acquire a drive letter
@@ -667,7 +729,9 @@ function(show_project_manifest)
 endfunction()
 
 macro(make_header_only_project)
-
+  
+   message("Adding Project: ${PROJECT_NAME}")
+   
    add_library(${PROJECT_NAME}_${PROJECT_NAME} INTERFACE)
    add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME}_${PROJECT_NAME})
 
@@ -685,21 +749,24 @@ macro(make_header_only_project)
    set_property(TARGET ${PROJECT_NAME}_${PROJECT_NAME} PROPERTY EXPORT_NAME ${PROJECT_NAME})
 
    target_compile_features(${PROJECT_NAME}_${PROJECT_NAME} INTERFACE cxx_std_20)
+
    target_include_directories(
       ${PROJECT_NAME}_${PROJECT_NAME} ${warning_guard}
-       INTERFACE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+      INTERFACE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
    )
 
    if(NOT CMAKE_SKIP_INSTALL_RULES)
-     include(${CMAKE_DIR}/core/install-rules.cmake)
+   include(${CMAKE_DIR}/core/install-rules.cmake)
    endif()
-   
+  
 endmacro()
 
 macro(make_project_executable project_name sources) 
    if(NOT TARGET ${project_name})
-      message(STATUS "Adding Project: ${project_name}")
-      add_executable(${project_name} ${sources} ${source_group_includes})  
+      message("Adding Project: ${project_name}")
+      group_project_files()
+      create_common_source_group_structure("${ide_grouping}")
+      add_executable(${project_name} ${sources} ${ide_grouping})  
       target_include_directories(${project_name} PUBLIC ${COMMON_INCLUDE_DIRS})
       target_link_libraries(${project_name} ${COMMON_LINK_LIBRARIES} ${TARGET_OPTIONAL_LIBRARIES})
       target_precompile_headers(${project_name} PRIVATE ${PCH_HEADERS})

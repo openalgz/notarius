@@ -22,7 +22,10 @@ macro(generate_notarius)
       list(APPEND PROJECT_DEPENDENCIES_LIST "ut,     https://github.com/boost-ext/ut.git,  v2.0.1")
    
       configure_boost_micro_unit_testing()
+
       fetch_content_and_make_available("${PROJECT_DEPENDENCIES_LIST}")   
+
+      #create_common_source_group_structure("${COMMON_INCLUDE_DIRS}")
 
       include("${CMAKE_DIR}/core/dev-mode.cmake")
 
