@@ -1,0 +1,10 @@
+build*
+compile_commands.json
+
+.vscode
+.cache
+.DS_Store
+.idea
+
+# Ignore all version.hpp files
+**/version.hpp

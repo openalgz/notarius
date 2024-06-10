@@ -80,9 +80,9 @@ then
    exit 1
 fi
 
-function show_cmake_build_and_install_manifest()
+function show_build_install_manifest()
 {
-    echo -e "\n${i_yellow}Default CMake Build and Install Manifest:${i_def}"
+    echo -e "\n${i_yellow}Build/Install Manifest:${i_def}"
     echo -e "  CMAKE_BINARY_DIR: '${CMAKE_BINARY_DIR}'."
     echo -e "  SHARED_PACKAGE_INSTALL_DIR: '${SHARED_PACKAGE_INSTALL_DIR}'.\n"
     sleep 2
