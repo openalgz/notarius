@@ -54,9 +54,9 @@ inline void test_notarius_streaming_operator(const std::string& caption, int id,
       // This option is not available for spdlog and will result in
       // slightly slower logging times.
       //
-      notarius_logger << "\nUsing '<<' operator for streaming: " << caption << ":" << " Thread Id : " << id << "line "
-                      << i << ": values unint32_t: " << v3 << "; float: " << v4 << "; double: " << v5 << "; string: **"
-                      << v6 << "{6}**";
+      notarius_logger << "\nUsing '<<' operator for streaming: " << caption << ":"
+                      << " Thread Id : " << id << "line " << i << ": values unint32_t: " << v3 << "; float: " << v4
+                      << "; double: " << v5 << "; string: **" << v6 << "{6}**";
    }
 }
 
