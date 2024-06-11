@@ -94,6 +94,15 @@ int run_notarius_tests(std::string_view run, int total_test_runs_count)
 {
    using namespace ut;
 
+   "notarius_cout_cerr_clog"_test = [&] {
+      notarius_logger.cout("Hello");
+      notarius_logger.cerr("Hello");
+      notarius_logger.cout("{}", "Hello");
+      notarius_logger.cout("{}, {}, {}", "Hello", 1, 1.2);
+      notarius_logger.cerr("{}", "Hello");
+      notarius_logger.cerr("{}, {}, {}", "Hello", 1, 1.2);
+   };
+
    "notarius_test_streaming_operator"_test = [&] {
       for (int i = 0; i < 10; ++i) {
          test_notarius(std::string(run), i, max_lines_count_);

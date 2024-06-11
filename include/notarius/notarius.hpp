@@ -224,11 +224,11 @@ namespace slx
       // std::deque<std::string> logging_store_;
       //
       std::string logging_store_;
-
-      // TODO: Try to improve this!
       std::string cout_store_;
       std::string cerr_store_;
       std::string clog_store_;
+
+      bool reserve_once{true};
 
       void reserve_store_capacities()
       {
@@ -254,10 +254,8 @@ namespace slx
       std::string log_output_file_path_{create_output_path(file_name_v, file_extension_v)};
 
       // Toggle writing to the ostream on/logging_off at some logging point in your code.
+      //
       bool toggle_immediate_mode_ = {false};
-
-      // Enable/disable flushing to a log file
-      bool flush_to_log_file_{true};
 
       notarius_opts_t options_{Options};
 
@@ -482,10 +480,6 @@ namespace slx
 
          static thread_local std::string msg;
 
-         static bool reserve_once{true};
-
-         // TODO: Check if really needed.
-         //
          if (reserve_once) {
             reserve_once = false;
             reserve_store_capacities();
