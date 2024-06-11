@@ -157,7 +157,7 @@ namespace slx
       warn,        // etc.
       error,
       exception,
-      count // Sentinel value
+      count        // Sentinel value; must be last
    };
    // clang-format on
 
