@@ -1,21 +1,16 @@
 #pragma once
 
-#include <algorithm>
 #include <array>
-#include <cstdio>
-#include <cstring>
+#include <charconv>
 #include <deque>
-#include <filesystem>
 #include <format>
 #include <fstream>
-#include <future>
+#include <functional>
 #include <iostream>
-#include <memory_resource>
 #include <mutex>
-#include <shared_mutex>
-#include <stdexcept>
 #include <string>
-#include <type_traits>
+#include <string_view>
+#include <system_error>
 
 namespace slx
 {
@@ -209,6 +204,25 @@ namespace slx
       size_t flush_to_log_at_bytes{1'048'576 * 50};
    };
 
+   template <log_level level, bool flush = true, typename... Args>
+   void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
+   {
+      static thread_local std::string msg;
+
+      if constexpr (level != log_level::none) {
+         msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
+      }
+      else {
+         msg = std::format(fmt, std::forward<Args>(args)...);
+      }
+
+      buffer << msg;
+
+      buffer.flush();
+
+      msg.clear();
+   }
+
    template <slx::string_literal Name = "", notarius_opts_t Options = notarius_opts_t{},
              slx::string_literal FileExtension = "log">
    struct notarius_t final
@@ -341,25 +355,6 @@ namespace slx
 
          logging_store_.clear();
       };
-
-      template <log_level level, bool flush = true, typename... Args>
-      void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
-      {
-         static thread_local std::string msg;
-
-         if constexpr (level != log_level::none) {
-            msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
-         }
-         else {
-            msg = std::format(fmt, std::forward<Args>(args)...);
-         }
-
-         buffer << msg;
-
-         buffer.flush();
-
-         msg.clear();
-      }
 
      public:
       auto& options() { return options_; }
