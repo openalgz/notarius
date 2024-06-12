@@ -1,21 +1,16 @@
 #pragma once
 
-#include <algorithm>
 #include <array>
-#include <cstdio>
-#include <cstring>
+#include <charconv>
 #include <deque>
-#include <filesystem>
 #include <format>
 #include <fstream>
-#include <future>
+#include <functional>
 #include <iostream>
-#include <memory_resource>
 #include <mutex>
-#include <shared_mutex>
-#include <stdexcept>
 #include <string>
-#include <type_traits>
+#include <string_view>
+#include <system_error>
 
 namespace slx
 {
@@ -157,7 +152,7 @@ namespace slx
       warn,        // etc.
       error,
       exception,
-      count // Sentinel value
+      count        // Sentinel value; must be last
    };
    // clang-format on
 
@@ -209,6 +204,25 @@ namespace slx
       size_t flush_to_log_at_bytes{1'048'576 * 50};
    };
 
+   template <log_level level, bool flush = true, typename... Args>
+   void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
+   {
+      static thread_local std::string msg;
+
+      if constexpr (level != log_level::none) {
+         msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
+      }
+      else {
+         msg = std::format(fmt, std::forward<Args>(args)...);
+      }
+
+      buffer << msg;
+
+      buffer.flush();
+
+      msg.clear();
+   }
+
    template <slx::string_literal Name = "", notarius_opts_t Options = notarius_opts_t{},
              slx::string_literal FileExtension = "log">
    struct notarius_t final
@@ -224,11 +238,11 @@ namespace slx
       // std::deque<std::string> logging_store_;
       //
       std::string logging_store_;
-
-      // TODO: Try to improve this!
       std::string cout_store_;
       std::string cerr_store_;
       std::string clog_store_;
+
+      bool reserve_once{true};
 
       void reserve_store_capacities()
       {
@@ -254,10 +268,8 @@ namespace slx
       std::string log_output_file_path_{create_output_path(file_name_v, file_extension_v)};
 
       // Toggle writing to the ostream on/logging_off at some logging point in your code.
+      //
       bool toggle_immediate_mode_ = {false};
-
-      // Enable/disable flushing to a log file
-      bool flush_to_log_file_{true};
 
       notarius_opts_t options_{Options};
 
@@ -343,25 +355,6 @@ namespace slx
 
          logging_store_.clear();
       };
-
-      template <log_level level, bool flush = true, typename... Args>
-      void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
-      {
-         static thread_local std::string msg;
-
-         if constexpr (level != log_level::none) {
-            msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
-         }
-         else {
-            msg = std::format(fmt, std::forward<Args>(args)...);
-         }
-
-         buffer << msg;
-
-         buffer.flush();
-
-         msg.clear();
-      }
 
      public:
       auto& options() { return options_; }
@@ -482,10 +475,6 @@ namespace slx
 
          static thread_local std::string msg;
 
-         static bool reserve_once{true};
-
-         // TODO: Check if really needed.
-         //
          if (reserve_once) {
             reserve_once = false;
             reserve_store_capacities();

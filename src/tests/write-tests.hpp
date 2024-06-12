@@ -16,17 +16,18 @@
 #include <string>
 
 #include "notarius/chrono.hpp"
+
 #include "notarius/notarius.hpp"
 
 // clang-format off
 #ifdef SPDLOG
    #include "spdlog/sinks/basic_file_sink.h"
    #include "spdlog/spdlog.h"
-   #ifdef SPDLOG_HEADER_ONLY
-      #pragma message("SPDLOG_HEADER_ONLY is defined")
-   #else
-      #pragma message("SPDLOG_HEADER_ONLY is not defined")
-   #endif
+   //#ifdef SPDLOG_HEADER_ONLY
+   //   #pragma message("SPDLOG_HEADER_ONLY is defined")
+   //#else
+   //   #pragma message("SPDLOG_HEADER_ONLY is not defined")
+   //#endif
 #endif
 // clang-format on
 
@@ -159,7 +160,7 @@ inline void publish_results(const std::string_view caption)
 int spdlog_vs_notarius_tests(std::string_view run, int total_test_runs_count)
 {
    // std::cout, etc. are disabled of logging tests.
-   // in notarius_logger.options_ these are all set to true.
+   // in notarius_logger.options_ these are all set to true as default values.
    //
    notarius_logger.pause_stderr();
    notarius_logger.pause_stdout();
@@ -231,6 +232,7 @@ inline void report_final_results()
       "async: {}\n>```\n>\n------\n\n";
    notarius_results_logger(summary, ave_spdlog, ave_async_spdlog, ave_notarius, ave_async_notarius);
    notarius_results_logger.close();
+   
    // const auto cmd = std::format("start {}", fs::absolute(notarius_results_logger.logfile_path()).string());
    // std::system(cmd.c_str());
 }
