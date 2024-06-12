@@ -16,7 +16,6 @@
 #include <string>
 
 #include "notarius/chrono.hpp"
-
 #include "notarius/notarius.hpp"
 
 // clang-format off
@@ -232,7 +231,7 @@ inline void report_final_results()
       "async: {}\n>```\n>\n------\n\n";
    notarius_results_logger(summary, ave_spdlog, ave_async_spdlog, ave_notarius, ave_async_notarius);
    notarius_results_logger.close();
-   
+
    // const auto cmd = std::format("start {}", fs::absolute(notarius_results_logger.logfile_path()).string());
    // std::system(cmd.c_str());
 }
