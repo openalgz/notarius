@@ -146,16 +146,25 @@ namespace slx
    }
 
    // clang-format off
+   /**
+    * @brief Enumeration representing the different log levels.
+    */
    enum class log_level : int {
-      none,        // none will insert an empty string, "", for the logging level in the message.
-      info,        // label will be 'info'
-      warn,        // etc.
-      error,
-      exception,
-      count        // Sentinel value; must be last
+       none,        ///< No logging level is included in the message.
+       info,        ///< Information log level: label is 'info'.
+       warn,        ///< Warning log level: label is 'warn'.
+       error,       ///< Error log level: label is 'error'.
+       exception,   ///< Exception log level: label is 'exception'.
+       count        ///< Sentinel value. Must be the last value in the enumeration.
+
+       // When adding or modifying this you must also update 'to_string(const log_level level)'
+       // defined below.
    };
    // clang-format on
 
+   /**
+    * @brief Acquires enumeration representing the different log levels to a const char*.
+    */
    inline constexpr const char* to_string(const log_level level)
    {
       constexpr std::array<const char*, static_cast<int>(log_level::count)> log_strings = {
@@ -164,47 +173,67 @@ namespace slx
       return log_strings[int(level)];
    }
 
-   // Default Logging Settings.
-   //
+   /// @brief Defines default configuration options for the notarius logging system.
    struct notarius_opts_t
    {
-      bool lock_free_enabled{false};
+      bool lock_free_enabled{false}; ///< Flag to enable lock-free logging.
 
-      // If immediate_mode is true, all output is written directly
-      // to the console or terminal. Otherwise, the output is cached
-      // until the cache reaches its maximum size, at which point
-      // the cache is flushed.
-      //
+      /**
+       * @brief If immediate_mode is true, all output is written directly
+       *        to the console or terminal. Otherwise, the output is cached
+       *        until the cache reaches its maximum size, at which point
+       *        the cache is flushed.
+       */
       bool immediate_mode{false};
 
-      bool enable_stdout{true};
+      /// @name Enable/Disable Standard Outputs
+      /// @{
+      bool enable_stdout{true}; ///< Enable logging to standard output.
+      bool enable_stderr{true}; ///< Enable logging to standard error.
+      bool enable_stdlog{true}; ///< Enable logging to standard log.
+      /// @}
 
-      bool enable_stderr{true};
+      bool enable_file_logging{false}; ///< Enable logging to file.
 
-      bool enable_stdlog{true};
+      bool append_to_log{true}; ///< Append to the log file instead of overwriting.
 
-      bool enable_file_logging{false};
+      bool append_newline_when_missing{false}; ///< Append a newline when missing at the end of a log entry.
 
-      bool append_to_log{true};
-
-      bool append_newline_when_missing{false};
-
-      // Split log files when they get to a certain size.
-      //
+      /**
+       * @brief Split log files when they get to a certain size.
+       *
+       * If true, log files will be split into multiple files when they reach
+       * the specified size limit (split_log_file_at_size_bytes).
+       */
       bool split_log_files{true};
 
-      // flush to stdout, err, or clog when this size is exceeded
-      //
+      /**
+       * @brief Flush to stdout, stderr, or stdlog when this size is exceeded.
+       *
+       * When the log buffer reaches this size, it will be flushed to the
+       * respective standard output streams (stdout, stderr, or stdlog).
+       */
       size_t flush_to_std_outputs_at_bytes{1024};
 
-      // The max allowable size of a log file (this is ignored when 'split_log_files' is false).
-      //
-      size_t split_log_file_at_size_bytes{1'048'576 * 50}; // 1MB
+      /**
+       * @brief The maximum allowable size of a log file.
+       *
+       * This option is ignored when 'split_log_files' is false.
+       * When a log file reaches this size, it will be split into a new file.
+       */
+      size_t split_log_file_at_size_bytes{1'048'576 * 50}; // 50 MB
 
-      size_t flush_to_log_at_bytes{1'048'576 * 50};
+      /**
+       * @brief Flush to the log file when this size is exceeded.
+       *
+       * When the log buffer reaches this size, it will be flushed to the log file.
+       */
+      size_t flush_to_log_at_bytes{1'048'576 * 50}; // 50 MB
    };
 
-   template <log_level level, bool flush = true, typename... Args>
+   // notarius helper method; flush a msg to an ostream
+   //
+   template <bool thow_error, log_level level, bool flush = true, typename... Args>
    void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
    {
       static thread_local std::string msg;
@@ -223,7 +252,13 @@ namespace slx
       msg.clear();
    }
 
-   template <slx::string_literal Name = "", notarius_opts_t Options = notarius_opts_t{},
+   /**
+      @brief A logger class for writing log messages to a file.
+      @tparam Name The name of the logger. If not provided, it defaults to 'notatarius'.
+      @tparam Options The options for configuring the logger. Defaults to an empty notarius_opts_t struct.
+      @tparam FileExtension The file extension for the log file. Defaults to "log".
+   */
+   template <slx::string_literal Name = "notatarius", notarius_opts_t Options = notarius_opts_t{},
              slx::string_literal FileExtension = "log">
    struct notarius_t final
    {
