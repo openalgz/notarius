@@ -16,6 +16,7 @@
 #### TODOs:
 
 - [ ] Complete Documentation (e.g., currently demo project documentation is just a copy of this; provide more examples, and so forth).
+- [ ] Add Doxygen comments and doxygen configuration file.
 - [ ] Support earlier versions of C++. Currently geared for C++ 20+. This will require std::format and std::format_string replacements. 
 - [ ] Create test cases to evaluate all features.
 - [ ] Add logging sinks to enable log messages to be sent to various destinations, such as network sockets, message queues, or databases. It may be desirable to not do this in the logger itself but have a file store 'watcher' to transfer data to other destinations. In other words support a local file store that is then utilized by another process for moving the data to other destinations. 
