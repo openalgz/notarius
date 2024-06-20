@@ -233,7 +233,7 @@ namespace slx
 
    // notarius helper method; flush a msg to an ostream
    //
-   template <bool thow_error, log_level level, bool flush = true, typename... Args>
+   template <log_level level, bool flush = true, typename... Args>
    void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
    {
       static thread_local std::string msg;
