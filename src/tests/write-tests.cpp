@@ -29,12 +29,9 @@ int main()
    notarius_results_logger("<span style=\"color:#2F4C99\">**Date / Time Run {}:**</span>\n",
                            slx::chrono::current_time_as_string());
 
-  // for (auto i = 0; i < test_runs_to_perform; ++i) {
-  //    spdlog_vs_notarius_tests(std::format("Run {}", i + 1), test_runs_to_perform);
- //  }
-
-   notarius_logger.options().immediate_mode = true;
-   notarius_logger.write("Hello\n");
+   for (auto i = 0; i < test_runs_to_perform; ++i) {
+      spdlog_vs_notarius_tests(std::format("Run {}", i + 1), test_runs_to_perform);
+   }
 
    report_final_results();
 
