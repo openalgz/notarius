@@ -112,38 +112,53 @@ The `notarius_opts` struct is a configuration structure that provides various op
 ```C++
 struct notarius_opts_t
 {
-  bool lock_free_enabled{false};
+    bool lock_free_enabled{false};
 
-  // If immediate_mode is true, all output is written directly
-  // to the console or terminal. Otherwise, the output is cached
-  // until the cache reaches its maximum size, at which point
-  // the cache is flushed.
-  //
-  bool immediate_mode{false};
+    // If immediate_mode is true, all output is written directly
+    // to the console or terminal. Otherwise, the output is cached
+    // until the cache reaches its maximum size, at which point
+    // the cache is flushed.
+    //
+    bool immediate_mode{false};
 
-  bool enable_stdout{true};
-  bool enable_stderr{true};
-  bool enable_stdlog{true};
+    bool enable_stdout{true};
+    bool enable_stderr{true};
+    bool enable_stdlog{true};
 
-  bool enable_file_logging{false};
+    bool enable_file_logging{false};
 
-  bool append_to_log{true};
+    bool append_to_log{true};
 
-  bool append_newline_when_missing{false};
+    bool append_newline_when_missing{false};
 
-  // Split log files when they get to a certain size.
-  //
-  bool split_log_files{true};
+    // Split log files when they get to a certain size.
+    //
+    bool split_log_files{true};
 
-  // flush to stdout, err, or clog when this size is exceeded
-  //
-  size_t flush_to_std_outputs_at_bytes{1024};
+    /** Disable file buffering.
+    *
+    * Benefit: Disabling buffering ensures that each write operation to the file is
+    * immediately reflected in the file system. This can be beneficial when you need
+    * to ensure that data is written promptly without waiting for a buffer to fill up.
+    *
+    * Trade-off: The immediate write approach can lead to increased system call overhead.
+    * Each write operation results in a system call to write data to the file, which can
+    * be relatively slow compared to writing to an in-memory buffer.
+    * 
+    * Therefore the performance of this feature is effected by your 'flush_to_log_at_bytes'
+    * size when 'disable_file_buffering' is set true.
+    */
+    bool disable_file_buffering{true};
 
-  size_t flush_to_log_at_bytes{1'048'576 * 50};
+    // flush to stdout, err, or clog when this size is exceeded
+    //
+    size_t flush_to_std_outputs_at_bytes{1024};
 
-  // The max allowable size of a log file (this is ignored when 'split_log_files' is false).
-  //
-  size_t split_log_file_at_size_bytes{1'048'576 * 50}; // 1MB
+    size_t flush_to_log_at_bytes{1'048'576 * 50};
+
+    // The max allowable size of a log file (this is ignored when 'split_log_files' is false).
+    //
+    size_t split_log_file_at_size_bytes{1'048'576 * 50}; // 1MB
 };
 ```
 
@@ -170,6 +185,15 @@ Determines whether the log file should be opened in append mode or overwritten. 
 
 **append_newline_when_missing:**
 When writing a line append a '\n' if one is missing.
+
+**disable_file_buffering:**
+
+> [!NOTE]
+>
+> Be aware of the following performance considerations when this is set to (currently the default setting) `true`:
+>
+> - **Buffering vs. No Buffering:** Disabling buffering (`pubsetbuf(0, 0)`) can lead to more frequent write operations to the file system, which may impact performance negatively, especially if your application writes data frequently in small chunks.
+> - **Buffered Write:** Using buffering can improve performance by reducing the number of actual write operations to the file system, aggregating multiple small writes into fewer larger writes. In general how this feature effects your performance is related to the 'flush_to_std_outputs_at_bytes' setting.
 
 **split_log_files**:
 Enables or disables splitting log files when they reach a certain size.

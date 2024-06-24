@@ -208,6 +208,20 @@ namespace slx
       bool split_log_files{true};
 
       /**
+       * Benefit: Disabling buffering ensures that each write operation to the file is
+       * immediately reflected in the file system. This can be beneficial when you need
+       * to ensure that data is written promptly without waiting for a buffer to fill up.
+       *
+       * Trade-off: The immediate write approach can lead to increased system call overhead.
+       * Each write operation results in a system call to write data to the file, which can
+       * be relatively slow compared to writing to an in-memory buffer.
+       * 
+       * Therefore the performance of this feature is effected by your 'flush_to_log_at_bytes'
+       * size.
+       */
+      bool disable_file_buffering{true};
+
+      /**
        * @brief Flush to stdout, stderr, or stdlog when this size is exceeded.
        *
        * When the log buffer reaches this size, it will be flushed to the
@@ -304,7 +318,7 @@ namespace slx
 
       // Toggle writing to the ostream on/logging_off at some logging point in your code.
       //
-      bool toggle_immediate_mode_ = {false};
+      std::atomic_bool toggle_immediate_mode_ = {false};
 
       notarius_opts_t options_{Options};
 
@@ -376,9 +390,21 @@ namespace slx
          if (logging_store_.empty()) return;
 
          if (options_.enable_file_logging) {
+
             open_log_output_stream();
+
+            // Note:
+            // 
+            // The following will write data to the file stream, either directly if buffering is
+            // disabled(pubsetbuf(0, 0)),or indirectly via an internal buffer if buffering is enabled. 
+            // 
+            // For details see where 'options_.disable_file_buffering' is being used.
+            //
             log_output_stream_.write(logging_store_.c_str(), logging_store_.size());
-            log_output_stream_.flush();
+
+            if (not options_.disable_file_buffering) {
+               log_output_stream_.flush();
+            }
          }
 
          logging_store_.clear();
@@ -483,6 +509,16 @@ namespace slx
             std::error_code ec = std::make_error_code(std::errc::io_error);
             throw std::system_error(
                ec, std::format("Error opening log file '{}' (error code: {})!", log_output_file_path_, ec.message()));
+         }
+         else {
+            if (options_.disable_file_buffering) {
+               //
+               // The following is generally useful for scenarios where immediate and unbuffered output to the file is
+               // helpful, but it can come with performance trade-offs. Since we are buffering the logging info already,
+               // this may be beneficial.
+               //
+               log_output_stream_.rdbuf()->pubsetbuf(0, 0);
+            }
          }
 
          return log_output_stream_.is_open();
@@ -673,11 +709,7 @@ namespace slx
          options_.append_to_log = enable;
       }
 
-      void toggle_immediate_mode()
-      {
-         std::unique_lock lock(mutex_);
-         toggle_immediate_mode_ = true;
-      }
+      void toggle_immediate_mode() { toggle_immediate_mode_ = true; }
 
       void close()
       {
@@ -707,6 +739,8 @@ namespace slx
 
       auto size() const { return logging_store_.size(); }
 
+      // TODO: use std::error_code?
+      //
       bool rdbuf(std::string& buffer)
       {
          try {
@@ -716,14 +750,19 @@ namespace slx
             if (!log_buf) {
                return false;
             }
+
+            std::unique_lock lock(mutex_);
             std::ostringstream os;
             os << log_buf.rdbuf();
-            buffer = os.str();
+
+            // cast 'os' to an rvalue reference, allowing the move
+            // constructor of std::string to be invoked.
+            //
+            buffer = std::move(os).str();
          }
          catch (...) {
             return false;
          }
-
          return true;
       }
 
@@ -731,7 +770,7 @@ namespace slx
       {
          std::string b;
          rdbuf(b);
-         return b;
+         return {b};
       }
 
       void clear()
