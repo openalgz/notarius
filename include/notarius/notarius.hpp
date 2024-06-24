@@ -365,9 +365,8 @@ namespace slx
                flush_clog();
             }
          }
-        
+
          toggle_immediate_mode_ = false;
-         
       }
 
       void flush_impl()
