@@ -570,12 +570,12 @@ endfunction()
 # Add a function to set these properties separately.
 #
 # Examples:
-# set_project_info("clutter_patch" 2 1 0)    -> v2.1.0
-# set_project_info("clutter_patch" "" "" "") -> vYY.MM.DD (e.g., v24.01.02)
-# set_project_info("clutter_patch" "-latest" "" "") , etc.
+# set_project_info("project_name" 2 1 0)    -> v2.1.0
+# set_project_info("project_name" "" "" "") -> vYY.MM.DD (e.g., v24.01.02)
+# set_project_info("project_name" "-latest" "" "") , etc.
 #
-# This function seaches for "${CMAKE_CURRENT_LIST_DIR}/include/clutter_patch/version.h.in" and 
-# generates the output file "${CMAKE_CURRENT_LIST_DIR}/include/clutter_patch/version.hpp".
+# This function seaches for "${CMAKE_CURRENT_LIST_DIR}/include/project_name/version.h.in" and 
+# generates the output file "${CMAKE_CURRENT_LIST_DIR}/include/project_name/version.hpp".
 function(set_project_info project_name project_url project_description major_version minor_version patch_version)
 
    string(TIMESTAMP CURRENT_DATE "%Y-%m-%d")

@@ -343,37 +343,31 @@ namespace slx
       {
          if (not options_.enable_stdout and not options_.enable_stderr and not options_.enable_stdlog) return;
 
+         auto immediate_mode = options_.immediate_mode || toggle_immediate_mode_;
+
          if (options_.enable_stdout && level <= log_level::warn) {
-            if (cout_store_.size() >= options_.flush_to_std_outputs_at_bytes) {
+            cout_store_.append(msg);
+            if (immediate_mode || (cout_store_.size() >= options_.flush_to_std_outputs_at_bytes)) {
                flush_cout();
-            }
-            else {
-               cout_store_.append(msg);
             }
          }
 
          if (options_.enable_stderr && level >= log_level::error) {
-            if (cerr_store_.size() >= options_.flush_to_std_outputs_at_bytes) {
+            cerr_store_.append(msg);
+            if (immediate_mode || (cerr_store_.size() >= options_.flush_to_std_outputs_at_bytes)) {
                flush_cerr();
-            }
-            else {
-               cerr_store_.append(msg);
             }
          }
 
          if (options_.enable_stdlog) {
-            if (clog_store_.size() >= options_.flush_to_std_outputs_at_bytes) {
+            clog_store_.append(msg);
+            if (immediate_mode || (clog_store_.size() >= options_.flush_to_std_outputs_at_bytes)) {
                flush_clog();
             }
-            else {
-               clog_store_.append(msg);
-            }
          }
-
-         if (toggle_immediate_mode_ || options_.immediate_mode) {
-            toggle_immediate_mode_ = false;
-            flush_std_outputs();
-         }
+        
+         toggle_immediate_mode_ = false;
+         
       }
 
       void flush_impl()

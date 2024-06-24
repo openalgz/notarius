@@ -252,17 +252,22 @@ remove_token()
     echo ${string}
  }
 
-if [[ -e "./config.sh" ]];
+parent_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+scripts_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+if [[ $scripts_dir == */scripts ]]; 
 then
-	. "./config.sh"
-	
+    #
+    # Remove '/scripts' from the end of scripts_dir to get the soul directory
+    #
+    parent_dir="${parent_dir%/scripts}"
 else
-	if [[ -e "./scripts/config.sh" ]];
+    scripts_dir="${scripts_dir}/scripts"
+fi
+if [[ -e "${scripts_dir}/config.sh" ]]; 
 	then
-		. "./scripts/config.sh"
+    . "${scripts_dir}/config.sh"
 	
 	else
-      echo -e "\n${i_yellow}Warning${i_def} - Missing Configuration Source '${i_red}./scripts/config.sh${i_def}'\n"
-      
-	fi
+  echo -e "\nWarning: Unable to find the required 'config.sh' script source in the expected location."
+  echo -e "Searched Path: '$scripts_dir/config.sh'"
 fi

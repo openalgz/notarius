@@ -43,7 +43,8 @@ then
    #
    user_profile="$USERPROFILE"
    SHARED_PACKAGE_INSTALL_DIR="${user_profile//\\//}/opt"
-   DEFAULT_CMAKE_GENERATOR="" # chooses system default
+   mkdir -p "${SHARED_PACKAGE_INSTALL_DIR}"
+   DEFAULT_CMAKE_GENERATOR=""
 
 elif os_apple;
 then
