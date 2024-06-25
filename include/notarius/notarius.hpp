@@ -231,7 +231,7 @@ namespace slx
        * Trade-off: The immediate write approach can lead to increased system call overhead.
        * Each write operation results in a system call to write data to the file, which can
        * be relatively slow compared to writing to an in-memory buffer.
-       * 
+       *
        * Therefore the performance of this feature is effected by your 'flush_to_log_at_bytes'
        * size.
        */
@@ -412,14 +412,13 @@ namespace slx
          if (logging_store_.empty()) return;
 
          if (options_.enable_file_logging) {
-
             open_log_output_stream();
 
             // Note:
-            // 
+            //
             // The following will write data to the file stream, either directly if buffering is
-            // disabled(pubsetbuf(0, 0)),or indirectly via an internal buffer if buffering is enabled. 
-            // 
+            // disabled(pubsetbuf(0, 0)),or indirectly via an internal buffer if buffering is enabled.
+            //
             // For details see where 'options_.disable_file_buffering' is being used.
             //
             log_output_stream_.write(logging_store_.c_str(), logging_store_.size());
