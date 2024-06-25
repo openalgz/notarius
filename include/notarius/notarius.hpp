@@ -281,7 +281,7 @@ namespace slx
          msg = std::format(fmt, std::forward<Args>(args)...);
       }
 
-      buffer << msg;
+      buffer.write(msg.c_str(), msg.size());
 
       buffer.flush();
 
@@ -535,7 +535,7 @@ namespace slx
             if (options_.disable_file_buffering) {
                //
                // The following is generally useful for scenarios where immediate 
-               // and unbuffered output to a file strore is helpful, but it can 
+               // and unbuffered output to a file store is helpful, but it can 
                // come with performance trade-offs. Since we are buffering the 
                // logging info already, this may be beneficial.
                //
@@ -767,14 +767,15 @@ namespace slx
       {
          try {
             close();
-            const auto file_path = log_path();
-            std::ifstream log_buf(file_path.data());
-            if (!log_buf) {
-               return false;
-            }
+
+            std::ifstream log_buf(log_path().data());
+
+            if (not log_buf)  return false;
 
             std::unique_lock lock(mutex_);
+
             std::ostringstream os;
+
             os << log_buf.rdbuf();
 
             // cast 'os' to an rvalue reference, allowing the move
