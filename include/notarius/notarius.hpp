@@ -65,7 +65,7 @@ namespace slx
 
       [[nodiscard]] constexpr auto operator<=>(const string_literal&) const = default;
 
-      constexpr const std::string_view sv() const noexcept { return {value, length}; }
+      constexpr std::string_view sv() const noexcept { return {value, length}; }
 
       constexpr operator std::string_view() const noexcept { return {value, length}; }
    };
@@ -119,7 +119,7 @@ namespace slx
       const auto max_file_index_exceeded_msg =
          "Warning: The max file limit of " + std::to_string(max_file_index) + " has been reached.";
 
-      if (!std::filesystem::exists(input_path_name)) return input_path_name.data();
+      if (!std::filesystem::exists(input_path_name)) return {input_path_name.data()};
 
       std::filesystem::path p = input_path_name;
       const std::string directory = p.parent_path().string();
@@ -179,18 +179,31 @@ namespace slx
       bool lock_free_enabled{false}; ///< Flag to enable lock-free logging.
 
       /**
-       * @brief If immediate_mode is true, all output is written directly
-       *        to the console or terminal. Otherwise, the output is cached
-       *        until the cache reaches its maximum size, at which point
-       *        the cache is flushed.
+       * @brief If immediate_mode is true, all data is written directly
+       *        to enabled standard outputs (std::cout, std::cerr, and std::clog). 
+       *        Otherwise, the output is cached until the cache reaches its maximum size, 
+       *        at which point the cache associated with a given standard output is flushed.
        */
-      bool immediate_mode{false};
+      bool immediate_mode{true};
 
+      /** Note
+       * 
+       *  By default, std::cout, std::cerr, and std::clog usually point to the same
+       *  ostream. Therefore, enabling all three may result in duplication of messages
+       *  written to these ostreams when all of them are enabled.
+       * 
+       *  Also the following log level filters are applied to the streams (currently
+       *  not configurable):
+       * 
+       *  std::cout ->  level <= log_level::warn 
+       *  std::cerr ->  level <= log_level::error 
+       *  std::clog ->  level <= log_level::none 
+      */
       /// @name Enable/Disable Standard Outputs
       /// @{
       bool enable_stdout{true}; ///< Enable logging to standard output.
       bool enable_stderr{true}; ///< Enable logging to standard error.
-      bool enable_stdlog{true}; ///< Enable logging to standard log.
+      bool enable_stdlog{false}; ///< Enable logging to standard log.
       /// @}
 
       bool enable_file_logging{false}; ///< Enable logging to file.
@@ -204,6 +217,9 @@ namespace slx
        *
        * If true, log files will be split into multiple files when they reach
        * the specified size limit (split_log_file_at_size_bytes).
+       * 
+       * 'enable_file_logging' must be true
+       * 
        */
       bool split_log_files{true};
 
@@ -234,6 +250,9 @@ namespace slx
        *
        * This option is ignored when 'split_log_files' is false.
        * When a log file reaches this size, it will be split into a new file.
+       * 
+       * 'enable_file_logging' must be true
+       * 
        */
       size_t split_log_file_at_size_bytes{1'048'576 * 50}; // 50 MB
 
@@ -241,6 +260,9 @@ namespace slx
        * @brief Flush to the log file when this size is exceeded.
        *
        * When the log buffer reaches this size, it will be flushed to the log file.
+       * 
+       * 'enable_file_logging' must be true
+       * 
        */
       size_t flush_to_log_at_bytes{1'048'576 * 50}; // 50 MB
    };
@@ -513,9 +535,10 @@ namespace slx
          else {
             if (options_.disable_file_buffering) {
                //
-               // The following is generally useful for scenarios where immediate and unbuffered output to the file is
-               // helpful, but it can come with performance trade-offs. Since we are buffering the logging info already,
-               // this may be beneficial.
+               // The following is generally useful for scenarios where immediate 
+               // and unbuffered output to a file strore is helpful, but it can 
+               // come with performance trade-offs. Since we are buffering the 
+               // logging info already, this may be beneficial.
                //
                log_output_stream_.rdbuf()->pubsetbuf(0, 0);
             }

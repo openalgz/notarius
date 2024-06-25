@@ -8,24 +8,21 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(ROOT_REPO_DIRECTORY "${CMAKE_SOURCE_DIR}" CACHE INTERNAL "" FORCE)
-set(PROJECT_DESCRIPTION "Notarius C++ Fast Logging Library" CACHE INTERNAL "")
-set(PROJECT_URL "https://github.com/openalgz/notarius" CACHE INTERNAL "")
-
 # Set Dependencies Here:
 #
-macro(generate_notarius)
+macro(generate_${PROJECT_NAME})
 
    if (PROJECT_IS_TOP_LEVEL)
    
-      list(APPEND PROJECT_DEPENDENCIES_LIST "spdlog, https://github.com/gabime/spdlog.git, v1.13.0")
-      list(APPEND PROJECT_DEPENDENCIES_LIST "ut,     https://github.com/boost-ext/ut.git,  v2.0.1")
+      list(APPEND PROJECT_DEPENDENCIES_LIST "spdlog,  https://github.com/gabime/spdlog.git, v1.13.0")
+      list(APPEND PROJECT_DEPENDENCIES_LIST "ut,      https://github.com/boost-ext/ut.git,  v2.0.1")
+      list(APPEND PROJECT_DEPENDENCIES_LIST "libfork, https://github.com/ConorWilliams/libfork.git, v3.8.0")
    
       configure_boost_micro_unit_testing()
 
       fetch_content_and_make_available("${PROJECT_DEPENDENCIES_LIST}")   
 
-      #create_common_source_group_structure("${COMMON_INCLUDE_DIRS}")
+      create_common_source_group_structure("${COMMON_INCLUDE_DIRS}")
 
       include("${CMAKE_DIR}/core/dev-mode.cmake")
 
@@ -58,6 +55,8 @@ endif()
 # if version is empty then git version is used.
 #
 macro(configure_main_project name version)
+
+   check_for_pkg_config_executable()
 
    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include")
       set(${PROJECT_NAME}_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" CACHE INTERNAL "" FORCE)
