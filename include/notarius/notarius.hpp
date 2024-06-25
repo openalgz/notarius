@@ -534,9 +534,9 @@ namespace slx
          else {
             if (options_.disable_file_buffering) {
                //
-               // The following is generally useful for scenarios where immediate 
-               // and unbuffered output to a file store is helpful, but it can 
-               // come with performance trade-offs. Since we are buffering the 
+               // The following is generally useful for scenarios where immediate
+               // and unbuffered output to a file store is helpful, but it can
+               // come with performance trade-offs. Since we are buffering the
                // logging info already, this may be beneficial.
                //
                log_output_stream_.rdbuf()->pubsetbuf(0, 0);
@@ -770,7 +770,7 @@ namespace slx
 
             std::ifstream log_buf(log_path().data());
 
-            if (not log_buf)  return false;
+            if (not log_buf) return false;
 
             std::unique_lock lock(mutex_);
 
