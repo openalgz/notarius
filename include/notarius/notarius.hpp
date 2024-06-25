@@ -180,25 +180,25 @@ namespace slx
 
       /**
        * @brief If immediate_mode is true, all data is written directly
-       *        to enabled standard outputs (std::cout, std::cerr, and std::clog). 
-       *        Otherwise, the output is cached until the cache reaches its maximum size, 
+       *        to enabled standard outputs (std::cout, std::cerr, and std::clog).
+       *        Otherwise, the output is cached until the cache reaches its maximum size,
        *        at which point the cache associated with a given standard output is flushed.
        */
       bool immediate_mode{true};
 
       /** Note
-       * 
+       *
        *  By default, std::cout, std::cerr, and std::clog usually point to the same
        *  ostream. Therefore, enabling all three may result in duplication of messages
        *  written to these ostreams when all of them are enabled.
-       * 
+       *
        *  Also the following log level filters are applied to the streams (currently
        *  not configurable):
-       * 
-       *  std::cout ->  level <= log_level::warn 
-       *  std::cerr ->  level <= log_level::error 
-       *  std::clog ->  level <= log_level::none 
-      */
+       *
+       *  std::cout ->  level <= log_level::warn
+       *  std::cerr ->  level <= log_level::error
+       *  std::clog ->  level <= log_level::none
+       */
       /// @name Enable/Disable Standard Outputs
       /// @{
       bool enable_stdout{true}; ///< Enable logging to standard output.
@@ -217,9 +217,9 @@ namespace slx
        *
        * If true, log files will be split into multiple files when they reach
        * the specified size limit (split_log_file_at_size_bytes).
-       * 
+       *
        * 'enable_file_logging' must be true
-       * 
+       *
        */
       bool split_log_files{true};
 
@@ -250,9 +250,9 @@ namespace slx
        *
        * This option is ignored when 'split_log_files' is false.
        * When a log file reaches this size, it will be split into a new file.
-       * 
+       *
        * 'enable_file_logging' must be true
-       * 
+       *
        */
       size_t split_log_file_at_size_bytes{1'048'576 * 50}; // 50 MB
 
@@ -260,9 +260,9 @@ namespace slx
        * @brief Flush to the log file when this size is exceeded.
        *
        * When the log buffer reaches this size, it will be flushed to the log file.
-       * 
+       *
        * 'enable_file_logging' must be true
-       * 
+       *
        */
       size_t flush_to_log_at_bytes{1'048'576 * 50}; // 50 MB
    };
