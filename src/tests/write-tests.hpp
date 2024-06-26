@@ -193,7 +193,7 @@ int spdlog_vs_notarius_tests(std::string_view run, int total_test_runs_count)
       record_tests_duration("notarius-async", total_test_runs_count, timer, notarius_async_time_result);
    };
 
-   "notarius_redirection"_test = [&] { 
+   "notarius_redirection"_test = [&] {
       slx::std_stream_redirection_t redirected_clog_output_stream(std::clog, notarius_redirect.rdbuf());
       notarius_redirect.enable_stdlog();
       std::clog << "Hello to notarius log file from std::clog.\n";

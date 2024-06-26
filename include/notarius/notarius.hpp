@@ -122,8 +122,7 @@ namespace slx
       //
       std_stream_redirection_t(std::ostream& stream, std::streambuf* new_buf)
          : redirected_stream_(stream), original_rdbuf_(stream.rdbuf(new_buf))
-      {
-      }
+      {}
 
       // Resets the stream to its original buffer
       inline void reset() { redirected_stream_.rdbuf(original_rdbuf_); }
@@ -318,7 +317,7 @@ namespace slx
        * 'enable_file_logging' must be true
        *
        */
-      size_t split_log_file_at_size_bytes{1'048'576*25}; // 25 MB
+      size_t split_log_file_at_size_bytes{1'048'576 * 25}; // 25 MB
 
       /**
        * @brief Flush to the log file when this size is exceeded.
@@ -329,8 +328,7 @@ namespace slx
        *
        */
       size_t flush_to_log_at_bytes{1'048'576 * 16}; // 16 MB
-   }; 
-   
+   };
 
    /**
       @brief A logger class for writing log messages to a file.
@@ -401,19 +399,17 @@ namespace slx
          else {
             msg = std::format(fmt, std::forward<Args>(args)...);
          }
-         
+
          buffer.write(msg.c_str(), msg.size());
 
          buffer.flush();
 
          msg.clear();
       }
-   
 
       void flush_cout()
       {
-         if (are_rdbufs_equal(log_output_stream_, std::cout))
-         {
+         if (are_rdbufs_equal(log_output_stream_, std::cout)) {
             flush();
             cout_store_.clear();
             return;
@@ -468,7 +464,6 @@ namespace slx
          toggle_immediate_mode_ = false;
 
          if (options_.enable_stdout && level <= log_level::warn) {
-
             if (are_rdbufs_equal(log_output_stream_, std::cout)) {
                return;
             }
@@ -481,7 +476,6 @@ namespace slx
          }
 
          if (options_.enable_stderr && level >= log_level::error) {
-
             if (are_rdbufs_equal(log_output_stream_, std::cerr)) {
                return;
             }
@@ -494,7 +488,6 @@ namespace slx
          }
 
          if (options_.enable_stdlog) {
-
             if (are_rdbufs_equal(log_output_stream_, std::clog)) {
                return;
             }
@@ -514,7 +507,6 @@ namespace slx
          if (logging_store_.empty()) return;
 
          if (options_.enable_file_logging) {
-
             open_log_output_stream();
 
             // Note:
@@ -525,7 +517,7 @@ namespace slx
             // For details see where 'options_.disable_file_buffering' is being used.
             //
             log_output_stream_.write(logging_store_.c_str(), logging_store_.size());
-            log_output_stream_.flush(); 
+            log_output_stream_.flush();
          }
 
          logging_store_.clear();
@@ -851,7 +843,7 @@ namespace slx
          namespace fs = std::filesystem;
 
          close();
-         
+
          std::unique_lock lock(mutex_);
 
          if (fs::exists(log_output_file_path_)) {
