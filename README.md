@@ -57,7 +57,7 @@ int main() {
     lgr << "Hello, " << "World..." << 1.2f << "; " << 1.2879945 << "; " << -1 << '\n'; 
 	
     // Do not log the message, only write it to stdout, stderr, or std::clog:
-	// 
+    // 
     lgr.cout("Hello Word\n");
     lgr.cout("Hello {}\n", "World");
     
@@ -93,7 +93,7 @@ Refer to the code documentation for more details on available options and usage 
 The `notarius_opts`_t struct provides various options to customize the behavior of the `notarius_t` logging class:
 
 ```C++
- /// @brief Defines default configuration options for the notarius logging system.
+/// @brief Defines default configuration options for the notarius logging system.
 struct notarius_opts_t
 {
   bool lock_free_enabled{false}; ///< Flag to enable lock-free logging.
