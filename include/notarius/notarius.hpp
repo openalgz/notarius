@@ -8,6 +8,7 @@
 #include <functional>
 #include <iostream>
 #include <mutex>
+#include <streambuf>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -109,6 +110,69 @@ namespace slx
    fixed_string(const char (&str)[N]) -> fixed_string<N - 1>;
 
    // end of glaze library code (https://github.com/stephenberry/glaze.git)
+
+   // RAII implementation to manage stream redirection
+   //
+   struct std_stream_redirection_t final
+   {
+      // Constructor: redirects the stream
+      // Parameters:
+      //   - stream: the stream to be redirected (e.g., std::clog)
+      //   - new_buf: pointer to the new stream buffer (e.g., file buffer)
+      //
+      std_stream_redirection_t(std::ostream& stream, std::streambuf* new_buf)
+         : redirected_stream_(stream), original_rdbuf_(stream.rdbuf(new_buf))
+      {
+      }
+
+      // Resets the stream to its original buffer
+      inline void reset() { redirected_stream_.rdbuf(original_rdbuf_); }
+
+      // Sets the stream to a new buffer
+      inline void reset(std::streambuf* new_buf) { redirected_stream_.rdbuf(new_buf); }
+
+      // Destructor: restores the original stream buffer
+      ~std_stream_redirection_t() { reset(); }
+
+     private:
+      std::ostream& redirected_stream_; // Reference to the stream being redirected
+      std::streambuf* original_rdbuf_; // Pointer to the original stream buffer
+   };
+
+   inline bool are_rdbufs_equal(std::ostream& lhv, std::ostream& rhv) { return lhv.rdbuf() == rhv.rdbuf(); }
+
+   /*
+   Example use case:
+
+   #include <fstream>
+   #include <iostream>
+
+   int main() {
+
+       std::ofstream logFile("log.txt");
+
+       if (!logFile.is_open()) {
+           std::cerr << "Failed to open log file." << std::endl;
+           return 1;
+       }
+
+       {
+           // Redirect std::clog to logFile
+           std_stream_redirection_t redirected_clog(std::clog, logFile.rdbuf());
+
+           // Test the redirection
+           std::clog << "This goes to the notarius log file." << std::endl;
+
+       } // The original stream buffer is restored here when redirector goes out of scope
+
+       // This will go to the original destination of std::clog (usually the terminal)
+       std::clog << "This goes to the original std::clog destination." << std::endl;
+
+       logFile.close();
+
+       return 0;
+   }
+   */
 
    template <typename T>
    concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
@@ -254,7 +318,7 @@ namespace slx
        * 'enable_file_logging' must be true
        *
        */
-      size_t split_log_file_at_size_bytes{1'048'576 * 50}; // 50 MB
+      size_t split_log_file_at_size_bytes{1'048'576*25}; // 25 MB
 
       /**
        * @brief Flush to the log file when this size is exceeded.
@@ -264,29 +328,9 @@ namespace slx
        * 'enable_file_logging' must be true
        *
        */
-      size_t flush_to_log_at_bytes{1'048'576 * 50}; // 50 MB
-   };
-
-   // notarius helper method; flush a msg to an ostream
-   //
-   template <log_level level, bool flush = true, typename... Args>
-   void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
-   {
-      static thread_local std::string msg;
-
-      if constexpr (level != log_level::none) {
-         msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
-      }
-      else {
-         msg = std::format(fmt, std::forward<Args>(args)...);
-      }
-
-      buffer.write(msg.c_str(), msg.size());
-
-      buffer.flush();
-
-      msg.clear();
-   }
+      size_t flush_to_log_at_bytes{1'048'576 * 16}; // 16 MB
+   }; 
+   
 
    /**
       @brief A logger class for writing log messages to a file.
@@ -344,8 +388,36 @@ namespace slx
 
       notarius_opts_t options_{Options};
 
+      // notarius helper method; flush a msg to an ostream
+      //
+      template <log_level level, bool flush = true, typename... Args>
+      void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
+      {
+         static thread_local std::string msg;
+
+         if constexpr (level != log_level::none) {
+            msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
+         }
+         else {
+            msg = std::format(fmt, std::forward<Args>(args)...);
+         }
+         
+         buffer.write(msg.c_str(), msg.size());
+
+         buffer.flush();
+
+         msg.clear();
+      }
+   
+
       void flush_cout()
       {
+         if (are_rdbufs_equal(log_output_stream_, std::cout))
+         {
+            flush();
+            cout_store_.clear();
+            return;
+         }
          if (cout_store_.empty()) return;
          std::cout << cout_store_;
          cout_store_.clear();
@@ -354,6 +426,11 @@ namespace slx
 
       void flush_cerr()
       {
+         if (are_rdbufs_equal(log_output_stream_, std::cerr)) {
+            flush();
+            cerr_store_.clear();
+            return;
+         }
          if (cerr_store_.empty()) return;
          std::cerr << cerr_store_;
          cerr_store_.clear();
@@ -362,6 +439,11 @@ namespace slx
 
       void flush_clog()
       {
+         if (are_rdbufs_equal(log_output_stream_, std::clog)) {
+            flush();
+            clog_store_.clear();
+            return;
+         }
          if (clog_store_.empty()) return;
          std::clog << clog_store_;
          clog_store_.clear();
@@ -375,34 +457,54 @@ namespace slx
          flush_clog();
       }
 
+      // Called from 'print' only...do not call from other locations!
+      //
       void write_to_std_output_stores(const std::string& msg, log_level level)
       {
          if (not options_.enable_stdout and not options_.enable_stderr and not options_.enable_stdlog) return;
 
          auto immediate_mode = options_.immediate_mode || toggle_immediate_mode_;
 
+         toggle_immediate_mode_ = false;
+
          if (options_.enable_stdout && level <= log_level::warn) {
-            cout_store_.append(msg);
+
+            if (are_rdbufs_equal(log_output_stream_, std::cout)) {
+               return;
+            }
+            else
+               cout_store_.append(msg);
+
             if (immediate_mode || (cout_store_.size() >= options_.flush_to_std_outputs_at_bytes)) {
                flush_cout();
             }
          }
 
          if (options_.enable_stderr && level >= log_level::error) {
-            cerr_store_.append(msg);
+
+            if (are_rdbufs_equal(log_output_stream_, std::cerr)) {
+               return;
+            }
+            else
+               cerr_store_.append(msg);
+
             if (immediate_mode || (cerr_store_.size() >= options_.flush_to_std_outputs_at_bytes)) {
                flush_cerr();
             }
          }
 
          if (options_.enable_stdlog) {
-            clog_store_.append(msg);
+
+            if (are_rdbufs_equal(log_output_stream_, std::clog)) {
+               return;
+            }
+            else
+               clog_store_.append(msg);
+
             if (immediate_mode || (clog_store_.size() >= options_.flush_to_std_outputs_at_bytes)) {
                flush_clog();
             }
          }
-
-         toggle_immediate_mode_ = false;
       }
 
       void flush_impl()
@@ -412,6 +514,7 @@ namespace slx
          if (logging_store_.empty()) return;
 
          if (options_.enable_file_logging) {
+
             open_log_output_stream();
 
             // Note:
@@ -422,10 +525,7 @@ namespace slx
             // For details see where 'options_.disable_file_buffering' is being used.
             //
             log_output_stream_.write(logging_store_.c_str(), logging_store_.size());
-
-            if (not options_.disable_file_buffering) {
-               log_output_stream_.flush();
-            }
+            log_output_stream_.flush(); 
          }
 
          logging_store_.clear();
@@ -435,6 +535,14 @@ namespace slx
       auto& options() { return options_; }
 
       auto logfile_path() const { return log_output_file_path_; }
+
+      auto logfile_name() -> std::string { return std::format("./{}.{}", file_name_v, file_extension_v); }
+
+      std::streambuf* rdbuf()
+      {
+         open_log_output_stream();
+         return log_output_stream_.rdbuf();
+      }
 
       void pause_file_logging()
       {
@@ -534,9 +642,9 @@ namespace slx
          else {
             if (options_.disable_file_buffering) {
                //
-               // The following is generally useful for scenarios where immediate 
-               // and unbuffered output to a file store is helpful, but it can 
-               // come with performance trade-offs. Since we are buffering the 
+               // The following is generally useful for scenarios where immediate
+               // and unbuffered output to a file store is helpful, but it can
+               // come with performance trade-offs. Since we are buffering the
                // logging info already, this may be beneficial.
                //
                log_output_stream_.rdbuf()->pubsetbuf(0, 0);
@@ -594,8 +702,6 @@ namespace slx
          }
 
          logging_store_.append({msg});
-
-         return;
       }
 
       template <log_level level = log_level::none, typename T>
@@ -744,9 +850,9 @@ namespace slx
       {
          namespace fs = std::filesystem;
 
+         close();
+         
          std::unique_lock lock(mutex_);
-
-         if (log_output_stream_.is_open()) log_output_stream_.close();
 
          if (fs::exists(log_output_file_path_)) {
             try {
@@ -763,14 +869,14 @@ namespace slx
 
       // TODO: use std::error_code?
       //
-      bool rdbuf(std::string& buffer)
+      bool to_string(std::string& buffer)
       {
          try {
             close();
 
             std::ifstream log_buf(log_path().data());
 
-            if (not log_buf)  return false;
+            if (not log_buf) return false;
 
             std::unique_lock lock(mutex_);
 
@@ -781,7 +887,7 @@ namespace slx
             // cast 'os' to an rvalue reference, allowing the move
             // constructor of std::string to be invoked.
             //
-            buffer = std::move(os).str();
+            buffer = {std::move(os).str()};
          }
          catch (...) {
             return false;
@@ -789,10 +895,10 @@ namespace slx
          return true;
       }
 
-      std::string rdbuf()
+      std::string to_string()
       {
          std::string b;
-         rdbuf(b);
+         to_string(b);
          return {b};
       }
 

@@ -35,5 +35,7 @@ int main()
 
    report_final_results();
 
+   fflush(stdout);
+
    return 0;
 }

@@ -62,7 +62,9 @@ int main() {
     lgr.cout("Hello {}\n", "World");
     
     lgr.pause_stderr();  // Pause lgr.cerr output 
-    lgr.cerr("There were {} {}\n", 5, "errors."); // this call is ignored.
+    {
+    	lgr.cerr("There were {} {}\n", 5, "errors."); // this call is ignored.
+    }
     lgr.enable_stderr(); // Enable stderr once again.
     
     lgr.clog("This will go to std::clog {}", "...");
@@ -86,128 +88,198 @@ Refer to the code documentation for more details on available options and usage 
 > The notarius.hpp header only requires STL header dependencies. The other header files in the `./include/notarius` folder are to support the provided test project.
 
 ------
+### Configuring Notarius Options
 
-### Specialized Write Method
+The `notarius_opts`_t struct provides various options to customize the behavior of the `notarius_t` logging class:
 
-The `notarius::write` method is used to log a message immediately to the console (`stdout` or `stderr`) vs caching the string to be written later when the `ostream_buffer` reaches its defined capacity. This way you can use caching to speed up console output but also having the ability to forcing critical outputs to be displayed right away.
+```C++
+ /// @brief Defines default configuration options for the notarius logging system.
+struct notarius_opts_t
+{
+  bool lock_free_enabled{false}; ///< Flag to enable lock-free logging.
+
+  /**
+   * @brief If immediate_mode is true, all data is written directly
+   *        to enabled standard outputs (std::cout, std::cerr, and std::clog).
+   *        Otherwise, the output is cached until the cache reaches its maximum size,
+   *        at which point the cache associated with a given standard output is flushed.
+   */
+  bool immediate_mode{true};
+
+  /** Note
+   *
+   *  By default, std::cout, std::cerr, and std::clog usually point to the same
+   *  ostream. Therefore, enabling all three may result in duplication of messages
+   *  written to these ostreams when all of them are enabled.
+   *
+   *  Also the following log level filters are applied to the streams (currently
+   *  not configurable):
+   *
+   *  std::cout ->  level <= log_level::warn
+   *  std::cerr ->  level <= log_level::error
+   *  std::clog ->  level <= log_level::none
+   */
+  /// @name Enable/Disable Standard Outputs
+  /// @{
+  bool enable_stdout{true}; ///< Enable logging to standard output.
+  bool enable_stderr{true}; ///< Enable logging to standard error.
+  bool enable_stdlog{false}; ///< Enable logging to standard log.
+  /// @}
+
+  bool enable_file_logging{false}; ///< Enable logging to file.
+
+  bool append_to_log{true}; ///< Append to the log file instead of overwriting.
+
+  bool append_newline_when_missing{false}; ///< Append a newline when missing at the end of a log entry.
+
+  /**
+   * @brief Split log files when they get to a certain size.
+   *
+   * If true, log files will be split into multiple files when they reach
+   * the specified size limit (split_log_file_at_size_bytes).
+   *
+   * 'enable_file_logging' must be true
+   *
+   */
+  bool split_log_files{true};
+
+  /**
+   * Benefit: Disabling buffering ensures that each write operation to the file is
+   * immediately reflected in the file system. This can be beneficial when you need
+   * to ensure that data is written promptly without waiting for a buffer to fill up.
+   *
+   * Trade-off: The immediate write approach can lead to increased system call overhead.
+   * Each write operation results in a system call to write data to the file, which can
+   * be relatively slow compared to writing to an in-memory buffer.
+   *
+   * Therefore the performance of this feature is effected by your 'flush_to_log_at_bytes'
+   * size.
+   */
+  bool disable_file_buffering{true};
+
+  /**
+   * @brief Flush to stdout, stderr, or stdlog when this size is exceeded.
+   *
+   * When the log buffer reaches this size, it will be flushed to the
+   * respective standard output streams (stdout, stderr, or stdlog).
+   */
+  size_t flush_to_std_outputs_at_bytes{1024};
+
+  /**
+   * @brief The maximum allowable size of a log file.
+   *
+   * This option is ignored when 'split_log_files' is false.
+   * When a log file reaches this size, it will be split into a new file.
+   *
+   * 'enable_file_logging' must be true
+   *
+   */
+  size_t split_log_file_at_size_bytes{1'048'576*25}; // 25 MB
+
+  /**
+   * @brief Flush to the log file when this size is exceeded.
+   *
+   * When the log buffer reaches this size, it will be flushed to the log file.
+   *
+   * 'enable_file_logging' must be true
+   *
+   */
+  size_t flush_to_log_at_bytes{1'048'576 * 16}; // 16 MB
+}; 
+```
+
+> [!NOTE]
+>
+> The following performance considerations should be noted when using `disable_file_buffering` (the default setting is true):
+>
+> - **Buffering vs. No Buffering:** 
+>   Disabling buffering (`pubsetbuf(0, 0)`) can lead to more frequent write operations to the file system, which may impact performance negatively, especially if your application writes data frequently in small chunks.
+> - **Buffered Write:** 
+>   Using buffering can improve performance by reducing the number of actual write operations to the file system, aggregating multiple small writes into fewer larger writes. In general how this feature effects your performance is related to the 'flush_to_std_outputs_at_bytes' setting.
+
+### notarius write vs print (or notarius::operator(...))
+
+The `notarius::write` method is used to log a message immediately to the console (`stdout`, `stderr`, or `std::clog`) vs caching the string to be written later when an associated stream buffer reaches its defined capacity for these objects. This way you can use caching to speed up console output but also having the ability to force critical outputs to be displayed right away.
 
 ```cpp
 template <log_level level = log_level::none, typename... Args>
 auto write(std::format_string<Args...> fmt, Args&&... args) {
-    toggle_immediate_mode(); // Enable immediate mode for this log
+    toggle_immediate_mode(); // Enable immediate mode for std::cout, std::cerr, or std::clog
     return print<level>(fmt, std::forward<Args>(args)...); // Call print method
 }
 ```
 
-The key difference between `write` and `print` is that `write` enables immediate mode before calling `print`. This ensures that the log message is written to the console immediately, without being buffered.
-
-Additionally, the `write` method still calls the `print` method, which means the log message will also be written to the log file when file logging is enabled.
-
-So, in summary, the `write` method provides a way to log a message to both the console (immediately) and the log file simultaneously. It's useful when you want to see the log message on the console right away while still maintaining a persistent log in a file.
-
-### Configuring Notarius Options
-
-The `notarius_opts` struct is a configuration structure that provides various options to customize the behavior of the `notarius_t` logging class:
-
-```C++
-struct notarius_opts_t
-{
-    bool lock_free_enabled{false};
-
-    // If immediate_mode is true, all output is written directly
-    // to the console or terminal. Otherwise, the output is cached
-    // until the cache reaches its maximum size, at which point
-    // the cache is flushed.
-    //
-    bool immediate_mode{false};
-
-    bool enable_stdout{true};
-    bool enable_stderr{true};
-    bool enable_stdlog{true};
-
-    bool enable_file_logging{false};
-
-    bool append_to_log{true};
-
-    bool append_newline_when_missing{false};
-
-    // Split log files when they get to a certain size.
-    //
-    bool split_log_files{true};
-
-    /** Disable file buffering.
-    *
-    * Benefit: Disabling buffering ensures that each write operation to the file is
-    * immediately reflected in the file system. This can be beneficial when you need
-    * to ensure that data is written promptly without waiting for a buffer to fill up.
-    *
-    * Trade-off: The immediate write approach can lead to increased system call overhead.
-    * Each write operation results in a system call to write data to the file, which can
-    * be relatively slow compared to writing to an in-memory buffer.
-    * 
-    * Therefore the performance of this feature is effected by your 'flush_to_log_at_bytes'
-    * size when 'disable_file_buffering' is set true.
-    */
-    bool disable_file_buffering{true};
-
-    // flush to stdout, err, or clog when this size is exceeded
-    //
-    size_t flush_to_std_outputs_at_bytes{1024};
-
-    size_t flush_to_log_at_bytes{1'048'576 * 50};
-
-    // The max allowable size of a log file (this is ignored when 'split_log_files' is false).
-    //
-    size_t split_log_file_at_size_bytes{1'048'576 * 50}; // 1MB
-};
+The key difference between `write` and `print` is that `write` calls `toggle_immediate_mode()` prior to calling`print`. This ensures that the log message is written to the console immediately, without being buffered. This is equivalent to:
+```c++
+lgr.toggle_immediate_mode();
+lgr.print("Print something...");
+//
+// is the same as:
+//
+lgr.write("Print something...");
 ```
 
-**lock_free_enabled:**
-Enables/disables lock-free logging. When set to `true`, the logging operations will be performed without acquiring a lock, potentially improving performance in multi-threaded environments.
+In summary, the `write` method provides a way to log a message to both the console (immediately) and the log file simultaneously. It's useful when you want to see the log message on the console right away while still writing to the logging file store.
 
-**immediate_mode:**
-If set to `true`, all output will be written directly to the console or terminal. Otherwise, the output will be cached until the cache reaches its maximum size, at which point the cache is flushed.
-
-**enable_stdout:**
- Enables/disables logging to the standard output stream (`std::cout`).
-
-**enable_stderr:**
-Enables/disables logging to the standard error stream (`std::cerr`).
-
-**enable_stdlog:**
-Enables/disables logging to the standard log stream (`std::clog`).
-
-**enable_file_logging:**
- Enables/disables logging to a file store.
-
-**append_to_log:**
-Determines whether the log file should be opened in append mode or overwritten. If set to `true`, log entries will be appended to the existing file. If set to `false`, the log file will be overwritten each time the logger is initialized.
-
-**append_newline_when_missing:**
-When writing a line append a '\n' if one is missing.
-
-**disable_file_buffering:**
-
-> [!NOTE]
+> [!IMPORTANT]
 >
-> Be aware of the following performance considerations when this is set to (currently the default setting) `true`:
+> In C++, `std::cout`, `std::cerr`, and `std::clog` are different stream objects, *<u>but they typically direct their output to the same destination</u>*, such as common debug terminal. Therefore note that the `notarius::print or notarius::operator()` will print to the standard streams when they are enabled and stream the messages as follows: to `std::cout` if  `log_level <= log_leve::warn`, to `std::cerr` if `log_level >= log_level::error` , and to `std::clog` regardless of the level.
 >
-> - **Buffering vs. No Buffering:** Disabling buffering (`pubsetbuf(0, 0)`) can lead to more frequent write operations to the file system, which may impact performance negatively, especially if your application writes data frequently in small chunks.
-> - **Buffered Write:** Using buffering can improve performance by reducing the number of actual write operations to the file system, aggregating multiple small writes into fewer larger writes. In general how this feature effects your performance is related to the 'flush_to_std_outputs_at_bytes' setting.
+> *This means if you have all three standard outputs enabled that you may create a situation where output to a terminal or console could be duplicated.* For example, if `notarius::cout(...)`, `notarius::cerr(...)`, and `notarius::clog(...)` are all enabled, and if all three standard outputs are directed to the same terminal, then calling notarius::("message") or notarius::print("message"), will result in a double output of the string "message". This is because at a minimum two outputs streams will be called. In this example `log_level` is `<= log_leve::warn`, the default level, therefore a write to std::cout is run, and since std::clog is enabled it will also output to this stream.
+>
+> See: **Understanding C++ Standard Stream Objects** below for additional details.
 
-**split_log_files**:
-Enables or disables splitting log files when they reach a certain size.
+#### Notarius Log Levels
+```c++
+enum class log_level : int {
+   none,        ///< No logging level is included in the message.
+   info,        ///< Information log level: label is 'info'.
+   warn,        ///< Warning log level: label is 'warn'.
+   error,       ///< Error log level: label is 'error'.
+   exception,   ///< Exception log level: label is 'exception'.
+};
+```
+### Understanding C++ Standard Stream Objects
 
-**split_log_file_at_size_bytes:**
-Specifies the maximum allowable size of a log file in bytes. This option is ignored if `split_log_files` is set to `false`.
+In C++, `std::cout`, `std::cerr`, and `std::clog` are different stream objects, but they typically direct their output to the same destination, such as the terminal. Here’s a detailed explanation of how they work and why they can be different stream objects yet appear to behave similarly:
 
-These options can be passed as a template argument to the `notarius_t` class to customize the logging behavior according to your requirements.
+1. **Stream Objects**:
+   - `std::cout` is an instance of `std::ostream` used for standard output.
+   - `std::cerr` is also an instance of `std::ostream`, but it is designed for error output and is typically unbuffered.
+   - `std::clog` is another instance of `std::ostream`, used for logging and is typically buffered.
+2. **Buffering**:
+   - **`std::cout`** is usually line-buffered if it is connected to a terminal, meaning it flushes its buffer on encountering a newline.
+   - **`std::cerr`** is unbuffered by default, meaning it outputs characters immediately.
+   - **`std::clog`** is buffered, meaning it collects output in a buffer and writes it in larger chunks.
+3. **Underlying Stream Buffer**:
+   - Even though they are different stream objects, they can share the same underlying `streambuf` object. The `streambuf` object is responsible for the actual input and output operations.
+   - By default, `std::cout`, `std::cerr`, and `std::clog` may use the same `streambuf` associated with the terminal. This is why their outputs appear on the same terminal.
 
-**flush_to_std_outputs_at_bytes:**
-Buffer the std::cout (stdcout), std::err (stderr), and std::clog, outputs to improve efficiency when writing to consoles and terminals.   When the buffers are greater than, or equal to this value then the buffers are flushed to the appropriate standard output stream.
+In the following example the std::clog is redefined to have the same output as the notarius log file store:
 
-**flush_to_log_at_bytes:**
-Buffers the log file output store. When the buffer is greater than, or equal to this value then the file store buffer is flushed to the file stream.
+```C++
+#include "notarius/notarius.hpp"
+
+inline slx::notarius_t <"lgr", slx::notarius_opts{}, "md"> lgr;
+
+int main() {
+    
+    // Redirect std::clog to output to the notarius log file:
+    //
+    slx::std_stream_redirection_t redirected_clog_output_stream(std::clog, lgr.rdbuf());
+
+    std::clog << "This goes to the notarius log file." << std::endl;
+
+    return 0;
+}
+
+```
+
+> [!TIP]
+>
+> It can be helpful to use notarius stream redirection when updating code that may be using std::clog to notarius. This way the use of std::clog does not have to be refactored in the program.
+>
+> In a similar manner std::cout and std::cerr may also be redirected.
 
 ## Contributing
 

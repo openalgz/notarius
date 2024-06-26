@@ -57,6 +57,8 @@ static std::chrono::steady_clock::duration ave_async_spdlog_time_result{};
 //
 inline slx::notarius_t<"notarius-results", slx::notarius_opts_t{.enable_file_logging = true}, "md"> notarius_logger;
 
+inline slx::notarius_t<"notarius-redirect", slx::notarius_opts_t{.enable_file_logging = true}, "md"> notarius_redirect;
+
 #ifdef SPDLOG
 inline auto spdlog_logger = spdlog::basic_logger_mt("basic_logger", "spdlog-results.md");
 #endif
@@ -189,6 +191,15 @@ int spdlog_vs_notarius_tests(std::string_view run, int total_test_runs_count)
       notarius_logger("\n");
       ave_async_notarius_time_result += timer.duration();
       record_tests_duration("notarius-async", total_test_runs_count, timer, notarius_async_time_result);
+   };
+
+   "notarius_redirection"_test = [&] { 
+      slx::std_stream_redirection_t redirected_clog_output_stream(std::clog, notarius_redirect.rdbuf());
+      notarius_redirect.enable_stdlog();
+      std::clog << "Hello to notarius log file from std::clog.\n";
+      notarius_redirect.clog("Hello to notarius from {}.\n", "notarius.clog");
+      notarius_redirect("Using notarius print to write to clog which is an ostream to {}.\n", "notarius.clog");
+      expect(not notarius_redirect.to_string().empty());
    };
 
 #ifdef SPDLOG
