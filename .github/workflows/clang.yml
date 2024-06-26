@@ -1,4 +1,4 @@
-nname: clang
+name: clang
 
 on:
   push:
