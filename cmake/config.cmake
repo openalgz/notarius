@@ -67,8 +67,6 @@ endif()
 #
 macro(configure_main_project name version)
 
-   check_for_pkg_config_executable()
-
    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include")
       set(${PROJECT_NAME}_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" CACHE INTERNAL "" FORCE)
       set(include_dir "${${PROJECT_NAME}_INCLUDE_DIR}")
