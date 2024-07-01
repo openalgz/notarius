@@ -8,15 +8,24 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Set Dependencies Here:
+# A demo project to start your own project with.
+#
+function(generate_demo_project)
+   set(DEST_DIR ${CMAKE_SOURCE_DIR}/src/demo)
+   file(COPY ${CMAKE_SOURCE_DIR}/scripts DESTINATION ${DEST_DIR})
+   file(COPY ${CMAKE_SOURCE_DIR}/cmake DESTINATION ${DEST_DIR})
+endfunction()
+
+# Set Your Dependencies Here:
 #
 macro(generate_${PROJECT_NAME})
 
    if (PROJECT_IS_TOP_LEVEL)
    
+      generate_demo_project()
+   
       list(APPEND PROJECT_DEPENDENCIES_LIST "spdlog,  https://github.com/gabime/spdlog.git, v1.13.0")
       list(APPEND PROJECT_DEPENDENCIES_LIST "ut,      https://github.com/boost-ext/ut.git,  v2.0.1")
-      list(APPEND PROJECT_DEPENDENCIES_LIST "libfork, https://github.com/ConorWilliams/libfork.git, v3.8.0")
    
       configure_boost_micro_unit_testing()
 
@@ -32,6 +41,8 @@ macro(generate_${PROJECT_NAME})
    endif()
    
 endmacro()
+
+
 
 macro(suppress_compiler_warnings)
 

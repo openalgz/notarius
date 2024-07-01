@@ -1,6 +1,8 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.20)
 
 include("cmake/prelude.cmake")
+
+message("-------- CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
 
 configure_main_project("demo" "") # blank to aquire/assign version from the git repo
                                   # yy.mm.dd is used if the repo does not have a 
