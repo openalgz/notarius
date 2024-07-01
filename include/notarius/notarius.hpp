@@ -890,7 +890,7 @@ namespace slx
       std::string to_string()
       {
          std::string b;
-     
+
          return { to_string(b); };
       }
 
