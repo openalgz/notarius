@@ -891,7 +891,7 @@ namespace slx
       {
          std::string b;
 
-         return { to_string(b) };
+         return {to_string(b)};
       }
 
       void clear()

@@ -28,7 +28,7 @@ void test_deque_as_buffer(size_t log_buffer_size, size_t max_log_entries)
 {
    std::deque<std::string> log_buffer;
    auto start = std::chrono::high_resolution_clock::now();
-   
+
    std::string buffer;
    buffer.reserve(1024);
    size_t currentSize = 0;
