@@ -334,15 +334,12 @@ namespace slx
       @brief A logger class for writing log messages to a file.
       @tparam Name The name of the logger. If not provided, it defaults to 'notatarius'.
       @tparam Options The options for configuring the logger. Defaults to an empty notarius_opts_t struct.
-      @tparam FileExtension The file extension for the log file. Defaults to "log".
    */
-   template <slx::string_literal Name = "notatarius", notarius_opts_t Options = notarius_opts_t{},
-             slx::string_literal FileExtension = "log">
+   template <slx::string_literal Name = "notatarius", notarius_opts_t Options = notarius_opts_t{}>
    struct notarius_t final
    {
      private:
       static constexpr std::string_view file_name_v{Name};
-      static constexpr std::string_view file_extension_v{FileExtension};
 
       mutable std::mutex mutex_; // mutable for const functions.
 
@@ -378,13 +375,17 @@ namespace slx
 
       std::ofstream log_output_stream_;
 
-      std::string log_output_file_path_{create_output_path(file_name_v, file_extension_v)};
+      std::string log_output_file_path_{create_output_path(file_name_v)};
 
       // Toggle writing to the ostream on/logging_off at some logging point in your code.
       //
       std::atomic_bool toggle_immediate_mode_ = {false};
 
       notarius_opts_t options_{Options};
+
+      // A delegate to forward a log message to. This is run on a separate thread.
+      //
+      std::function<void(std::string_view)> forward_to;
 
       // notarius helper method; flush a msg to an ostream
       //
@@ -528,7 +529,7 @@ namespace slx
 
       auto logfile_path() const { return log_output_file_path_; }
 
-      auto logfile_name() -> std::string { return std::format("./{}.{}", file_name_v, file_extension_v); }
+      auto logfile_name() -> std::string { return std::format("./{}", file_name_v); }
 
       std::streambuf* rdbuf()
       {
@@ -586,15 +587,14 @@ namespace slx
 
       // The following routines manage the log output (file store) path:
       //
-      inline void check_log_file_path() { create_output_path(log_output_file_path_, file_name_v, file_extension_v); }
+      inline void check_log_file_path() { create_output_path(log_output_file_path_, file_name_v); }
 
-      inline void create_output_path(std::string& output_path, const std::string_view file_name_v,
-                                     const std::string_view file_extension_v)
+      inline void create_output_path(std::string& output_path, const std::string_view file_name_v)
       {
          namespace fs = std::filesystem;
 
          if (output_path.empty()) {
-            output_path = std::format("./{}.{}", file_name_v, file_extension_v);
+            output_path = std::format("./{}", file_name_v);
          }
 
          if (!fs::exists(output_path)) {
@@ -604,10 +604,10 @@ namespace slx
          }
       }
 
-      inline auto create_output_path(const std::string_view file_name_v, const std::string_view file_extension_v)
+      inline auto create_output_path(const std::string_view file_name_v)
       {
          std::string p;
-         create_output_path(p, file_name_v, file_extension_v);
+         create_output_path(p, file_name_v);
          return p;
       }
 
@@ -678,6 +678,10 @@ namespace slx
          }
 
          write_to_std_output_stores(msg, level);
+
+         if (forward_to) {
+            std::thread([this, msg = msg]() { forward_to(msg); }).detach();
+         }
 
          const size_t check_size = logging_store_.size() + msg.size();
 
@@ -803,7 +807,7 @@ namespace slx
       }
 
       template <log_level level = log_level::none, typename... Args>
-      friend auto& operator<<(notarius_t<Name, Options, FileExtension>& notarius, Args&&... args)
+      friend auto& operator<<(notarius_t<Name, Options>& notarius, Args&&... args)
       {
          notarius.print<level>("{}", std::forward<Args>(args)...);
          return notarius;
