@@ -47,7 +47,7 @@ void test_deque_as_buffer(size_t log_buffer_size, size_t max_log_entries)
 
 int main()
 {
-   constexpr size_t log_buffer_size = 10 * (1 << 20); // Also correct: ~10 MB //~ 10 MB
+   constexpr size_t log_buffer_size = 10 * (1 << 20); // ~ 10 MB
    constexpr size_t max_log_entries = 10'000'000;
 
    test_string_as_buffer(log_buffer_size, max_log_entries);
