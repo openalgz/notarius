@@ -10,7 +10,7 @@
 #include <iostream>
 #include <string_view>
 
-namespace soul
+namespace slx
 {
    struct product_version_info_t
    {

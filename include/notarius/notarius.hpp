@@ -226,7 +226,7 @@ namespace slx
    // clang-format on
 
    /**
-    * @brief Acquires enumeration representing the different log levels to a const char*.
+    * @brief Acquires enumeration representing the different log levels in a const char*.
     */
    inline constexpr const char* to_string(const log_level level)
    {
