@@ -35,8 +35,8 @@ namespace slx
         {}
         {}
         {})",
-                                            T::project_name, T::project_ver, T::project_description,
-                                            T::project_homepage_url, T::company_url, T::project_copyright);
+        T::project_name, T::project_ver, T::project_description,
+        T::project_homepage_url, T::company_url, T::project_copyright);
       return about;
    }
 }
