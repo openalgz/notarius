@@ -10,37 +10,37 @@ namespace slx
 {
    namespace io
    {
-     template <int max_file_index = 100>
-     inline std::string get_next_available_filename(const std::string_view input_path_name)
-     {
-       const auto max_file_index_exceeded_msg =
-       "Warning: The max file limit of " + std::to_string(max_file_index) + " has been reached.";
-       
-       if (!std::filesystem::exists(input_path_name)) return {input_path_name.data()};
-       
-       std::filesystem::path p = input_path_name;
-       const std::string directory = p.parent_path().string();
-       const std::string extension = p.extension().string();
-       std::string filename = p.stem().string();
-       
-       const size_t last_underscore_pos = filename.find_last_of('_');
-       if (last_underscore_pos != std::string::npos) {
-         const std::string after_underscore = filename.substr(last_underscore_pos + 1);
-         const bool numeric = std::all_of(after_underscore.begin(), after_underscore.end(), ::isdigit);
-         if (numeric) {
-           filename.erase(last_underscore_pos);
+      template <int max_file_index = 100>
+      inline std::string get_next_available_filename(const std::string_view input_path_name)
+      {
+         const auto max_file_index_exceeded_msg =
+            "Warning: The max file limit of " + std::to_string(max_file_index) + " has been reached.";
+
+         if (!std::filesystem::exists(input_path_name)) return {input_path_name.data()};
+
+         std::filesystem::path p = input_path_name;
+         const std::string directory = p.parent_path().string();
+         const std::string extension = p.extension().string();
+         std::string filename = p.stem().string();
+
+         const size_t last_underscore_pos = filename.find_last_of('_');
+         if (last_underscore_pos != std::string::npos) {
+            const std::string after_underscore = filename.substr(last_underscore_pos + 1);
+            const bool numeric = std::all_of(after_underscore.begin(), after_underscore.end(), ::isdigit);
+            if (numeric) {
+               filename.erase(last_underscore_pos);
+            }
          }
-       }
-       
-       for (size_t i = 1; i <= static_cast<size_t>(max_file_index); ++i) {
-         std::string tmp = std::format("{}/{}_{}{}", directory, filename, i, extension);
-         if (!std::filesystem::exists(tmp)) {
-           return tmp;
+
+         for (size_t i = 1; i <= static_cast<size_t>(max_file_index); ++i) {
+            std::string tmp = std::format("{}/{}_{}{}", directory, filename, i, extension);
+            if (!std::filesystem::exists(tmp)) {
+               return tmp;
+            }
          }
-       }
-       
-       throw std::runtime_error(max_file_index_exceeded_msg);
-     }
+
+         throw std::runtime_error(max_file_index_exceeded_msg);
+      }
 
       constexpr const char* map_ios_flags(std::ios_base::openmode mode)
       {
