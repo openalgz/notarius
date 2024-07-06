@@ -42,7 +42,7 @@ struct TestResult
    double stddev{};
 };
 
-template<typename T> 
+template <typename T>
 concept is_string_like = std::is_convertible_v<T, std::string_view>;
 
 template <typename Container>
@@ -118,7 +118,6 @@ std::string test_vector_of_std_string()
       v.emplace_back(test_string);
    }
    return make_string(v);
-
 }
 
 std::string test_deque_of_std_string()
@@ -192,7 +191,7 @@ void warm_up()
 int main()
 {
    std::cout << "Warming up...\n";
-   //warm_up();
+   // warm_up();
    std::cout << "Starting tests...\n";
    run_test(test_string_append, "test_string_append");
    run_test(test_stringstream, "test_stringstreamm");
