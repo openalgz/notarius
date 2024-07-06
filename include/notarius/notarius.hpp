@@ -182,7 +182,7 @@ namespace slx
       const auto max_file_index_exceeded_msg =
          "Warning: The max file limit of " + std::to_string(max_file_index) + " has been reached.";
 
-      if (!std::filesystem::exists(input_path_name)) return {input_path_name.data()};
+      if (!std::filesystem::exists(input_path_name)) return input_path_name.data();
 
       std::filesystem::path p = input_path_name;
       const std::string directory = p.parent_path().string();
@@ -895,7 +895,7 @@ namespace slx
       {
          std::string b;
 
-         return {to_string(b)};
+         return to_string(b);
       }
 
       void clear()
