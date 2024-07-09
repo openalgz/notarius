@@ -21,7 +21,6 @@ static constexpr bool test_notarius_operators = false;
 using namespace boost::ut;
 using namespace slx;
 
-
 void run_api_tests()
 {
    auto test_cleanup = []() {
@@ -110,7 +109,8 @@ void run_api_tests()
          logger.print<log_level::error>("Hello, {}", "world\n");
          logger.print<log_level::exception>("Hello, {}", "world\n");
          auto actual = logger.str();
-         constexpr auto expected = "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
+         constexpr auto expected =
+            "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
          expect(actual == expected);
       };
 

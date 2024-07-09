@@ -76,7 +76,6 @@ struct init_notarius_logging_options_t
    init_notarius_logging_options_t() { operator()(); }
 };
 
-
 inline void record_tests_duration(const std::string_view caption, int total_tests_run_count,
                                   slx::chrono::duration_t& timer, std::string& result)
 {
