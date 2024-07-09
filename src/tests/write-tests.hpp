@@ -55,17 +55,27 @@ static std::chrono::steady_clock::duration ave_async_spdlog_time_result{};
 //
 // In other words file logging alone is enabled for the timing test.
 //
-inline slx::notarius_t<"notarius-results.md", slx::notarius_opts_t{.enable_file_logging = true}> notarius_logger;
+inline slx::notarius_t<"notarius-results.md"> notarius_logger;
+inline slx::notarius_t<"notarius-redirect.md"> notarius_redirect;
 
-inline slx::notarius_t<"notarius-redirect.md", slx::notarius_opts_t{.enable_file_logging = true}> notarius_redirect;
+// A log file containing a summary of results.
+inline slx::notarius_t<"spdlog_vs_notarius_test_results.md"> notarius_results_logger;
 
 #ifdef SPDLOG
 inline auto spdlog_logger = spdlog::basic_logger_mt("basic_logger", "spdlog-results.md");
 #endif
 
-// A log file containing a summary of results.
-inline slx::notarius_t<"spdlog_vs_notarius_test_results.md", slx::notarius_opts_t{.enable_file_logging = true}>
-   notarius_results_logger;
+struct init_notarius_logging_options_t
+{
+   void operator()()
+   {
+      notarius_logger.enable_file_logging();
+      notarius_redirect.enable_file_logging();
+      notarius_results_logger.enable_file_logging();
+   }
+   init_notarius_logging_options_t() { operator()(); }
+};
+
 
 inline void record_tests_duration(const std::string_view caption, int total_tests_run_count,
                                   slx::chrono::duration_t& timer, std::string& result)
@@ -199,7 +209,8 @@ int spdlog_vs_notarius_tests(std::string_view run, int total_test_runs_count)
       std::clog << "Hello to notarius log file from std::clog.\n";
       notarius_redirect.clog("Hello to notarius from {}.\n", "notarius.clog");
       notarius_redirect("Using notarius print to write to clog which is an ostream to {}.\n", "notarius.clog");
-      expect(not notarius_redirect.to_string().empty());
+      std::string buffer;
+      expect(not notarius_redirect.write_string(buffer).empty());
    };
 
 #ifdef SPDLOG

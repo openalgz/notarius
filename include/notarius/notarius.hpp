@@ -174,10 +174,52 @@ namespace slx
    */
 
    template <typename T>
+   concept is_filesystem_path_convertable = requires(T t) { std::filesystem::path(t); };
+
+   // Templated getFileName function
+   template <is_filesystem_path_convertable T>
+   std::string get_filename(const T& path)
+   {
+      return std::filesystem::path(path).filename().string();
+   }
+
+   template <bool publish = false>
+   inline void remove_files_in_directory(const std::filesystem::path& directory, const std::string_view extension)
+   {
+      namespace fs = std::filesystem;
+
+      if (fs::exists(directory) && fs::is_directory(directory)) {
+         for (const auto& entry : fs::directory_iterator(directory)) {
+            if (entry.is_regular_file() && entry.path().extension() == extension) {
+               fs::remove(entry.path());
+               if constexpr (publish) {
+                  std::cout << "Deleted: " << entry.path() << std::endl;
+               }
+            }
+         }
+      }
+      else {
+         if constexpr (publish) {
+            std::cerr << "The specified path is not a directory or does not exist." << std::endl;
+         }
+      }
+   }
+
+   inline void remove_files(const std::vector<std::string>& files)
+   {
+      for (const auto& file : files) {
+         if (std::filesystem::exists(file)) {
+            std::filesystem::remove(file);
+         }
+      }
+   }
+
+   template <typename T>
    concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
 
    template <int max_file_index = 100>
-   inline std::string get_next_available_filename(const std::string_view input_path_name)
+   inline std::string get_next_available_filename(const std::string_view input_path_name,
+                                                  const std::string_view default_extension = ".log")
    {
       const auto max_file_index_exceeded_msg =
          "Warning: The max file limit of " + std::to_string(max_file_index) + " has been reached.";
@@ -185,8 +227,17 @@ namespace slx
       if (!std::filesystem::exists(input_path_name)) return input_path_name.data();
 
       std::filesystem::path p = input_path_name;
-      const std::string directory = p.parent_path().string();
-      const std::string extension = p.extension().string();
+
+      std::string directory = p.parent_path().string();
+      if (directory.empty()) {
+         directory = std::filesystem::current_path().string();
+      }
+
+      std::string extension = p.extension().string();
+      if (extension.empty()) {
+         extension = default_extension;
+      }
+
       std::string filename = p.stem().string();
 
       const size_t last_underscore_pos = filename.find_last_of('_');
@@ -328,6 +379,11 @@ namespace slx
        *
        */
       size_t flush_to_log_at_bytes{1'048'576 * 16}; // 16 MB
+
+      /**
+       * @brief The default extension to use if one is not defined.
+       */
+      std::string default_extension{".log"};
    };
 
    /**
@@ -335,7 +391,7 @@ namespace slx
       @tparam Name The name of the logger. If not provided, it defaults to 'notatarius'.
       @tparam Options The options for configuring the logger. Defaults to an empty notarius_opts_t struct.
    */
-   template <slx::string_literal Name = "notatarius", notarius_opts_t Options = notarius_opts_t{}>
+   template <slx::string_literal Name = "notatarius-log">
    struct notarius_t final
    {
      private:
@@ -381,7 +437,7 @@ namespace slx
       //
       std::atomic_bool toggle_immediate_mode_ = {false};
 
-      notarius_opts_t options_{Options};
+      notarius_opts_t options_{};
 
       // A delegate to forward a log message to. This is run on a separate thread.
       //
@@ -689,7 +745,7 @@ namespace slx
             flush_impl();
             if (options_.enable_file_logging) {
                log_output_stream_.close();
-               log_output_file_path_ = get_next_available_filename(log_output_file_path_);
+               log_output_file_path_ = get_next_available_filename(log_output_file_path_, options_.default_extension);
             }
          }
 
@@ -807,7 +863,7 @@ namespace slx
       }
 
       template <log_level level = log_level::none, typename... Args>
-      friend auto& operator<<(notarius_t<Name, Options>& notarius, Args&&... args)
+      friend auto& operator<<(notarius_t<Name>& notarius, Args&&... args)
       {
          notarius.print<level>("{}", std::forward<Args>(args)...);
          return notarius;
@@ -863,16 +919,16 @@ namespace slx
 
       auto size() const { return logging_store_.size(); }
 
-      // TODO: use std::error_code?
-      //
-      bool to_string(std::string& buffer)
+      auto& write_string(std::string& buffer)
       {
          try {
             close();
 
+            buffer = "";
+
             std::ifstream log_buf(log_path().data());
 
-            if (not log_buf) return false;
+            if (not log_buf) return buffer;
 
             std::unique_lock lock(mutex_);
 
@@ -886,16 +942,15 @@ namespace slx
             buffer = {std::move(os).str()};
          }
          catch (...) {
-            return false;
+            return buffer;
          }
-         return true;
+         return buffer;
       }
 
-      std::string to_string()
+      std::string str()
       {
-         std::string b;
-
-         return to_string(b);
+         std::string buffer;
+         return write_string(buffer);
       }
 
       void clear()
@@ -937,6 +992,8 @@ namespace slx
          std::unique_lock lock(mutex_);
          return logging_store_.shrink_to_fit();
       }
+
+      constexpr notarius_t() noexcept = default;
 
       ~notarius_t()
       {
