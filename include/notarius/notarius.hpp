@@ -194,24 +194,8 @@ namespace slx
    template <typename T>
    concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
 
-   // A simple thread pool for notarius::forward_to calls
-   //
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
-#include <exception>
-#include <functional>
-#include <future>
-#include <iostream>
-#include <mutex>
-#include <optional>
-#include <queue>
-#include <stdexcept>
-#include <thread>
-#include <vector>
-
    /**
-    * @brief A simple thread pool for managing and executing tasks.
+    * @brief A simple thread pool for managing and executing tasks. see: 'notarius::forward_to'
     */
    struct thread_pool_t final
    {
