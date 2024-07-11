@@ -2,16 +2,21 @@
 
 #include <array>
 #include <charconv>
+#include <condition_variable>
 #include <deque>
 #include <format>
 #include <fstream>
 #include <functional>
+#include <future>
 #include <iostream>
 #include <mutex>
+#include <queue>
 #include <streambuf>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <thread>
+#include <vector>
 
 namespace slx
 {
@@ -175,10 +180,83 @@ namespace slx
    */
 
    template <typename T>
+   concept is_loggable = requires(T t) {
+      {
+         std::format("{}", t)
+      } -> std::convertible_to<std::string>;
+   };
+
+   template <typename T>
    concept is_filesystem_path_convertable = requires(T t) { std::filesystem::path(t); };
 
    template <typename T>
    concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
+
+   // A simple thread pool for notarius::forward_to calls
+   //
+   struct thread_pool_t final
+   {
+      explicit thread_pool_t(size_t num_threads) : stop(false)
+      {
+         for (size_t i = 0; i < num_threads; ++i) {
+            workers.emplace_back([this] {
+               while (true) {
+                  std::function<void()> task;
+                  {
+                     std::unique_lock<std::mutex> lock(this->queue_mutex);
+                     this->condition.wait(lock, [this] { return this->stop || !this->tasks.empty(); });
+                     if (this->stop && this->tasks.empty()) {
+                        return;
+                     }
+                     task = std::move(this->tasks.front());
+                     this->tasks.pop();
+                  }
+                  task();
+               }
+            });
+         }
+      }
+
+      template <class F, class... Args>
+      auto enqueue(F&& f, Args&&... args) -> std::future<typename std::invoke_result<F, Args...>::type>
+      {
+         using return_type = typename std::invoke_result<F, Args...>::type;
+
+         auto task = std::make_shared<std::packaged_task<return_type()>>(
+            std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+
+         std::future<return_type> res = task->get_future();
+         {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            if (stop) {
+               throw std::runtime_error("enqueue on stopped thread_pool_t");
+            }
+            tasks.emplace([task]() { (*task)(); });
+         }
+         condition.notify_one();
+         return res;
+      }
+
+      ~thread_pool_t()
+      {
+         {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            stop = true;
+         }
+         condition.notify_all();
+         for (std::thread& worker : workers) {
+            worker.join();
+         }
+      }
+
+     private:
+      std::vector<std::thread> workers;
+      std::queue<std::function<void()>> tasks;
+
+      std::mutex queue_mutex;
+      std::condition_variable condition;
+      bool stop;
+   };
 
    template <is_filesystem_path_convertable T>
    std::string get_filename(const T& path)
@@ -288,8 +366,8 @@ namespace slx
     */
    inline constexpr const char* to_string(const log_level level)
    {
-      constexpr std::array<const char*, static_cast<int>(log_level::count)> log_strings = {
-         /*none:*/ "", "info", "warn", "error", "exception"};
+      constexpr std::array<const char*, static_cast<int>(log_level::count)> log_strings = {/*none:*/ "", "info", "warn",
+                                                                                           "error", "exception"};
       if (int(level) >= log_strings.size()) return "";
       return log_strings[int(level)];
    }
@@ -401,7 +479,14 @@ namespace slx
 
       mutable std::string log_output_file_path_{get_log_file_path(default_logger_name_or_path.data())};
 
-      mutable std::mutex mutex_; // mutable for const functions.
+      mutable std::shared_mutex mutex_; // mutable for const functions.
+
+      // Ensure at least 2 threads on single-core system...otherwise use half of
+      // the available hardware threads.
+      //
+      constexpr size_t thread_count() const { return std::max(2u, std::thread::hardware_concurrency() / 2); }
+
+      thread_pool_t thread_pool_{thread_count()};
 
       // The logging store.
       // using std::string as the store is slightly faster:
@@ -412,7 +497,7 @@ namespace slx
       std::string cerr_store_;
       std::string clog_store_;
 
-      bool reserve_once{true};
+      std::atomic<bool> reserve_once{true};
 
       void reserve_store_capacities()
       {
@@ -441,13 +526,15 @@ namespace slx
 
       notarius_opts_t options_{Options};
 
+      std::shared_mutex& get_mutex() { return mutex_; }
+
       // A delegate to forward a log message to. This is run on a separate thread.
       //
       std::function<void(std::string_view)> forward_to;
 
       // notarius helper method; flush a msg to an ostream
       //
-      template <log_level level, bool flush = true, typename... Args>
+      template <log_level level, bool flush = true, is_loggable... Args>
       void update_io_buffer(std::ostream& buffer, std::format_string<Args...> fmt, Args&&... args)
       {
          static thread_local std::string msg;
@@ -710,7 +797,7 @@ namespace slx
                // The following is generally useful for scenarios where immediate
                // and unbuffered output to a file store is helpful, but it can
                // come with performance trade-offs. Since we are buffering the
-               // logging by default (see 'std::string logging_store_;'), this 
+               // logging by default (see 'std::string logging_store_;'), this
                // will usually be beneficial.
                //
                log_output_stream_.rdbuf()->pubsetbuf(0, 0);
@@ -720,11 +807,11 @@ namespace slx
          return log_output_stream_.is_open();
       }
 
-      bool is_open() const { return log_output_stream_.is_open(); }
+      [[nodiscard]] bool is_open() const { return log_output_stream_.is_open(); }
 
       // See: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2508r1.html
       //
-      template <log_level level = log_level::none, typename... Args>
+      template <log_level level = log_level::none, is_loggable... Args>
       void print(std::format_string<Args...> fmt, Args&&... args)
       {
          std::unique_lock cs(mutex_, std::defer_lock);
@@ -754,7 +841,7 @@ namespace slx
          write_to_std_output_stores(msg, level);
 
          if (forward_to) {
-            std::thread([this, msg = msg]() { forward_to(msg); }).detach();
+            thread_pool_.enqueue([this, msg = std::string(msg)]() { forward_to(msg); });
          }
 
          const size_t check_size = logging_store_.size() + msg.size();
@@ -774,31 +861,31 @@ namespace slx
          logging_store_.append({msg});
       }
 
-      template <log_level level = log_level::none, typename T>
+      template <log_level level = log_level::none, is_loggable T>
       void print(const T& msg)
       {
          print<level>("{}", msg);
       }
 
-      template <log_level level = log_level::none, typename T>
+      template <log_level level = log_level::none, is_loggable T>
       void print(T&& msg)
       {
          print<level>("{}", std::forward<T>(msg));
       }
 
-      template <log_level level = log_level::none, typename... Args>
+      template <log_level level = log_level::none, is_loggable... Args>
       void operator()(std::format_string<Args...> fmt, Args&&... args)
       {
          print<level>(fmt, std::forward<Args>(args)...);
       }
 
-      template <typename T>
+      template <is_loggable T>
       void operator()(const T& msg)
       {
          print("{}", msg);
       }
 
-      template <typename T>
+      template <is_loggable T>
       void operator()(T&& msg)
       {
          print("{}", std::forward<T>(msg));
@@ -806,7 +893,7 @@ namespace slx
 
       // Always writes immediately to console while also logging
       // the message to a file store.
-      template <log_level level = log_level::none, typename... Args>
+      template <log_level level = log_level::none, is_loggable... Args>
       auto write(std::format_string<Args...> fmt, Args&&... args)
       {
          toggle_immediate_mode();
@@ -815,21 +902,21 @@ namespace slx
 
       // Writes to std::cout and then flushes
       //
-      template <log_level level = log_level::none, bool flush = true, typename... Args>
+      template <log_level level = log_level::none, bool flush = true, is_loggable... Args>
       void cout(std::format_string<Args...> fmt, Args&&... args)
       {
          if (not options_.enable_stdout) return;
          update_io_buffer<level, flush>(std::cout, fmt, std::forward<Args>(args)...);
       }
 
-      template <log_level level = log_level::none, bool flush = true, typename T>
+      template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void cout(const T& msg)
       {
          if (not options_.enable_stdout) return;
          cout<level, flush>("{}", msg);
       }
 
-      template <log_level level = log_level::none, bool flush = true, typename T>
+      template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void cout(T&& msg)
       {
          if (not options_.enable_stdout) return;
@@ -838,49 +925,49 @@ namespace slx
 
       // Writes to std::cerr and then flushes
       //
-      template <log_level level = log_level::none, bool flush = true, typename... Args>
+      template <log_level level = log_level::none, bool flush = true, is_loggable... Args>
       void cerr(std::format_string<Args...> fmt, Args&&... args)
       {
          if (not options_.enable_stderr) return;
          update_io_buffer<level, flush>(std::cerr, fmt, std::forward<Args>(args)...);
       }
 
-      template <log_level level = log_level::none, bool flush = true, typename T>
+      template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void cerr(const T& msg)
       {
          if (not options_.enable_stderr) return;
          cerr<level, flush>("{}", msg);
       }
 
-      template <log_level level = log_level::none, bool flush = true, typename T>
+      template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void cerr(T&& msg)
       {
          if (not options_.enable_stderr) return;
          cerr<level, flush>("{}", std::forward<T>(msg));
       }
 
-      template <log_level level = log_level::none, bool flush = true, typename... Args>
+      template <log_level level = log_level::none, bool flush = true, is_loggable... Args>
       void clog(std::format_string<Args...> fmt, Args&&... args)
       {
          if (not options_.enable_stdlog) return;
          update_io_buffer<level, flush>(std::clog, fmt, std::forward<Args>(args)...);
       }
 
-      template <log_level level = log_level::none, bool flush = true, typename T>
+      template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void clog(const T& msg)
       {
          if (not options_.enable_stdlog) return;
          clog<level, flush>("{}", msg);
       }
 
-      template <log_level level = log_level::none, bool flush = true, typename T>
+      template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void clog(T&& msg)
       {
          if (not options_.enable_stdlog) return;
          clog<level, flush>("{}", std::forward<T>(msg));
       }
 
-      template <log_level level = log_level::none, typename... Args>
+      template <log_level level = log_level::none, is_loggable... Args>
       friend auto& operator<<(notarius_t<LogFileNameOrPath, Options>& notarius, Args&&... args)
       {
          notarius.print<level>("{}", std::forward<Args>(args)...);
