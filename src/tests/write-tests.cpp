@@ -100,7 +100,6 @@ void run_api_tests()
 
    suite notarius_t_tests = [] {
       "notarius_t print method"_test = [] {
-
          notarius_t<"test-log-file.md", notarius_opts_t{.enable_file_logging = true}> logger;
          remove_files({logger.logfile_name()});
          logger.print<log_level::none>("Hello, {}", "world\n");
@@ -112,7 +111,6 @@ void run_api_tests()
          constexpr auto expected =
             "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
          expect(actual == expected);
-
       };
 
       "notarius_t operator() method"_test = [] {

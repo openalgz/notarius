@@ -288,8 +288,8 @@ namespace slx
     */
    inline constexpr const char* to_string(const log_level level)
    {
-      constexpr std::array<const char*, static_cast<int>(log_level::count)> log_strings = {
-         /*none:*/ "", "info", "warn", "error", "exception"};
+      constexpr std::array<const char*, static_cast<int>(log_level::count)> log_strings = {/*none:*/ "", "info", "warn",
+                                                                                           "error", "exception"};
       if (int(level) >= log_strings.size()) return "";
       return log_strings[int(level)];
    }
@@ -710,7 +710,7 @@ namespace slx
                // The following is generally useful for scenarios where immediate
                // and unbuffered output to a file store is helpful, but it can
                // come with performance trade-offs. Since we are buffering the
-               // logging by default (see 'std::string logging_store_;'), this 
+               // logging by default (see 'std::string logging_store_;'), this
                // will usually be beneficial.
                //
                log_output_stream_.rdbuf()->pubsetbuf(0, 0);
