@@ -1286,5 +1286,4 @@ namespace slx
       }
    };
 
-
 } // namespace slx
