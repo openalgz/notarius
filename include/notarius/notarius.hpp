@@ -247,7 +247,7 @@ namespace slx
          {
             std::unique_lock lock(queue_mutex_);
             if (stop_requested_) {
-                throw std::runtime_error("'enqueue' on stopped thread_pool_t!");
+               throw std::runtime_error("'enqueue' on stopped thread_pool_t!");
             }
             if (tasks_.size() >= max_queue_size_) {
                throw std::runtime_error("'thread_pool_t' Task queue is full!");
@@ -258,12 +258,12 @@ namespace slx
                      (*task)();
                   }
                   catch (const std::exception& e) {
-                     std::cerr << "'thread_pool_t' exception in task: " << e.what() << " (Thread ID: " << std::this_thread::get_id()
-                               << ")!" << std::endl;
+                     std::cerr << "'thread_pool_t' exception in task: " << e.what()
+                               << " (Thread ID: " << std::this_thread::get_id() << ")!" << std::endl;
                   }
                   catch (...) {
-                     std::cerr << "Unknown 'thread_pool_t' exception in task (Thread ID: " << std::this_thread::get_id() << ")!"
-                               << std::endl;
+                     std::cerr << "Unknown 'thread_pool_t' exception in task (Thread ID: " << std::this_thread::get_id()
+                               << ")!" << std::endl;
                   }
                },
                priority));
