@@ -6,20 +6,22 @@
 >
 > **Goals:**
 >
-> - It should remain header only. It is currently less than 800 lines of code including the comments. The only file needed for your projects is `notarius.hpp`
->- Fast, equal to spdlog (see spdlog tests comparisons) in performance.
+> - It should remain as a single header only (other than STL headers). The only file needed for projects is `notarius.hpp`and a modern C++ library. Although additional files are contained in the `./include/notarius` path, these files are not needed are only provided for test project support.
+> - Note that performance is variable across compilers and machines. On Windows it will generally be 2x faster than spdlog and equal to spdlog on Linux and Apple.
 > - Easy to use (e.g., easy configurability of logging instances, and, the implementation of the source code should be easy to read and understand).
->- Thread safety that can be turned off when not required.
+> - Thread safety that can be turned off when not required.
+> - Notarius is easy to modify (i.e., copy the header and erase features your situation does not need to simplify the code even further).
 
 ------
 
 #### TODOs:
 
-- [ ] Complete Documentation (e.g., currently demo project documentation is just a copy of this; provide more examples, and so forth).
+- [ ] Create Documenation, best practices with notarius, provide example use cases, and explain notarius features.
 - [ ] Add Doxygen comments and doxygen configuration file.
 - [ ] Support earlier versions of C++. Currently geared for C++ 20+. This will require std::format and std::format_string replacements. 
-- [x] Improve test cases.
-- [x] Added  `std::function<void(std::string_view)> forward_to;` This method is called when writing to the logger and allows messages to be sent to custom locations.
+- [ ] Add conditional compilation support to filter out un-needed features.
+- [ ] Continue to improve test cases.
+- [x] Added  `std::function<void(std::string_view)> forward_to;` This method is called when writing to the logger and allows messages to be sent to custom locations. When this function is called it is run in a thread pool.
 
 ------
 
@@ -29,9 +31,9 @@ Notarius is a header-only (the only header dependencies should come from the STL
 - **Output Streams**: Allows logging to multiple output streams, including stdout, stderr, and file. Each of these features may be enabled or disabled. 
 - **File Logging**: Logs can be written to a file with automatic file creation, appending, and splitting based on file size.
 - **Formatting**: Supports formatting log messages using `std::format` syntax.
-- **Thread Safety**: Provides thread-safe logging using a shared mutex.
+- **Thread Safety**: Provides thread-safe logging using std::mutex.
 - **Performance**: Offers options for lock-free logging and immediate mode to output streams for improved control over performance characteristics.
-- **Customization**: Allows customization of log file names, extensions, and paths.
+- **Customization**: Allows customization of having multiple log output targets.
 
 ## Example Usage
 
@@ -40,10 +42,11 @@ To use the Notarius logging library, simply include the `notarius.hpp` header fi
 ```cpp
 #include "notarius.hpp"
 
-// Create a logger named 'lgr' with file name 'lgr.md' using the default notarius options with the 
+// Create a logger with file name 'lgr.md' using the default notarius options with the 
 // Markdown extension md.
 //
-inline slx::notarius_t < "lgr", slx::notarius_opts{}, "md" > lgr;
+// inline slx::notarius_t <"lgr.md"> lgr; // default .enable_logging is false
+inline slx::notarius_t < "lgr.md", slx::notarius_opts{.enable_logging = true}> lgr;
 
 int main() {
     
@@ -96,6 +99,8 @@ The `notarius_opts`_t struct provides various options to customize the behavior 
 /// @brief Defines default configuration options for the notarius logging system.
 struct notarius_opts_t
 {
+  bool enable_file_logging{false}; ///< Enable logging to file.
+  
   bool lock_free_enabled{false}; ///< Flag to enable lock-free logging.
 
   /**
@@ -125,8 +130,6 @@ struct notarius_opts_t
   bool enable_stderr{true}; ///< Enable logging to standard error.
   bool enable_stdlog{false}; ///< Enable logging to standard log.
   /// @}
-
-  bool enable_file_logging{false}; ///< Enable logging to file.
 
   bool append_to_log{true}; ///< Append to the log file instead of overwriting.
 
@@ -260,10 +263,10 @@ In the following example the std::clog is redefined to have the same output as t
 ```C++
 #include "notarius/notarius.hpp"
 
-inline slx::notarius_t <"lgr", slx::notarius_opts{}, "md"> lgr;
+inline slx::notarius_t <"lgr", slx::notarius_opts{.enable_logging = true}> lgr;
 
 int main() {
-    
+    //
     // Redirect std::clog to output to the notarius log file:
     //
     slx::std_stream_redirection_t redirected_clog_output_stream(std::clog, lgr.rdbuf());
