@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <barrier>
 #include <charconv>
 #include <condition_variable>
 #include <deque>
@@ -11,6 +12,7 @@
 #include <iostream>
 #include <mutex>
 #include <queue>
+#include <stop_token>
 #include <streambuf>
 #include <string>
 #include <string_view>
@@ -196,66 +198,169 @@ namespace slx
    //
    struct thread_pool_t final
    {
-      explicit thread_pool_t(size_t num_threads) : stop(false)
+      struct Task final
       {
-         for (size_t i = 0; i < num_threads; ++i) {
-            workers.emplace_back([this] {
-               while (true) {
-                  std::function<void()> task;
-                  {
-                     std::unique_lock<std::mutex> lock(this->queue_mutex);
-                     this->condition.wait(lock, [this] { return this->stop || !this->tasks.empty(); });
-                     if (this->stop && this->tasks.empty()) {
-                        return;
-                     }
-                     task = std::move(this->tasks.front());
-                     this->tasks.pop();
-                  }
-                  task();
-               }
-            });
+         std::function<void()> func;
+         int priority{};
+         std::chrono::steady_clock::time_point enqueue_time;
+
+         Task(std::function<void()> f, int p)
+            : func(std::move(f)), priority(p), enqueue_time(std::chrono::steady_clock::now())
+         {}
+
+         bool operator<(const Task& other) const
+         {
+            if (priority == other.priority) return enqueue_time > other.enqueue_time;
+            return priority < other.priority;
+         }
+      };
+
+      explicit thread_pool_t(size_t initial_threads = std::thread::hardware_concurrency(), size_t max_queue_size = 1000)
+         : max_queue_size_(max_queue_size)
+      {
+         try {
+            resize(initial_threads);
+         }
+         catch (...) {
+            stop_requested_ = true;
+            throw;
          }
       }
 
+      ~thread_pool_t() { stop(true); }
+
+      thread_pool_t(const thread_pool_t&) = delete;
+      thread_pool_t& operator=(const thread_pool_t&) = delete;
+      thread_pool_t(thread_pool_t&&) = delete;
+      thread_pool_t& operator=(thread_pool_t&&) = delete;
+
       template <class F, class... Args>
-      auto enqueue(F&& f, Args&&... args) -> std::future<typename std::invoke_result<F, Args...>::type>
+      auto enqueue(F&& f, Args&&... args, int priority = 0) -> std::future<std::invoke_result_t<F, Args...>>
       {
-         using return_type = typename std::invoke_result<F, Args...>::type;
-
+         using return_type = std::invoke_result_t<F, Args...>;
          auto task = std::make_shared<std::packaged_task<return_type()>>(
-            std::bind(std::forward<F>(f), std::forward<Args>(args)...));
-
+            [f = std::forward<F>(f), ... args = std::forward<Args>(args)]() mutable {
+               return std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            });
          std::future<return_type> res = task->get_future();
+
          {
-            std::unique_lock<std::mutex> lock(queue_mutex);
-            if (stop) {
-               throw std::runtime_error("enqueue on stopped thread_pool_t");
+            std::unique_lock lock(queue_mutex_);
+            if (stop_requested_) {
+                throw std::runtime_error("'enqueue' on stopped thread_pool_t!");
             }
-            tasks.emplace([task]() { (*task)(); });
+            if (tasks_.size() >= max_queue_size_) {
+               throw std::runtime_error("'thread_pool_t' Task queue is full!");
+            }
+            tasks_.emplace(Task(
+               [task = std::move(task)]() {
+                  try {
+                     (*task)();
+                  }
+                  catch (const std::exception& e) {
+                     std::cerr << "'thread_pool_t' exception in task: " << e.what() << " (Thread ID: " << std::this_thread::get_id()
+                               << ")!" << std::endl;
+                  }
+                  catch (...) {
+                     std::cerr << "Unknown 'thread_pool_t' exception in task (Thread ID: " << std::this_thread::get_id() << ")!"
+                               << std::endl;
+                  }
+               },
+               priority));
          }
-         condition.notify_one();
+         cv_.notify_one();
          return res;
       }
 
-      ~thread_pool_t()
+      void stop(bool wait_for_tasks = true)
       {
          {
-            std::unique_lock<std::mutex> lock(queue_mutex);
-            stop = true;
+            std::unique_lock lock(queue_mutex_);
+            stop_requested_ = true;
          }
-         condition.notify_all();
-         for (std::thread& worker : workers) {
-            worker.join();
+
+         cv_.notify_all();
+
+         if (wait_for_tasks) {
+            for (auto& worker : workers_) {
+               if (worker.joinable()) {
+                  worker.join();
+               }
+            }
+         }
+
+         workers_.clear();
+
+         {
+            std::unique_lock lock(queue_mutex_);
+            stop_requested_ = false;
+            tasks_ = std::priority_queue<Task>();
          }
       }
 
-     private:
-      std::vector<std::thread> workers;
-      std::queue<std::function<void()>> tasks;
+      void resize(size_t new_size)
+      {
+         stop(true);
+         workers_.clear();
+         workers_.reserve(new_size);
+         for (size_t i = 0; i < new_size; ++i) {
+            add_worker();
+         }
+      }
 
-      std::mutex queue_mutex;
-      std::condition_variable condition;
-      bool stop;
+      size_t size() const { return workers_.size(); }
+
+      size_t queue_size() const
+      {
+         std::unique_lock lock(queue_mutex_);
+         return tasks_.size();
+      }
+
+      void wait_for_tasks()
+      {
+         std::unique_lock lock(queue_mutex_);
+         cv_.wait(lock, [this] { return tasks_.empty() && (active_threads_ == 0); });
+      }
+
+      bool is_stopped() const
+      {
+         std::unique_lock lock(queue_mutex_);
+         return stop_requested_;
+      }
+
+     private:
+      void add_worker()
+      {
+         workers_.emplace_back([this] {
+            while (true) {
+               std::optional<Task> task;
+               {
+                  std::unique_lock lock(queue_mutex_);
+                  cv_.wait(lock, [this] { return !tasks_.empty() || stop_requested_; });
+                  if (stop_requested_ && tasks_.empty()) {
+                     return;
+                  }
+                  if (!tasks_.empty()) {
+                     task = std::move(const_cast<Task&>(tasks_.top()));
+                     tasks_.pop();
+                  }
+               }
+               if (task) {
+                  ++active_threads_;
+                  task->func();
+                  --active_threads_;
+               }
+            }
+         });
+      }
+
+      std::vector<std::thread> workers_;
+      std::priority_queue<Task> tasks_;
+      mutable std::mutex queue_mutex_;
+      std::condition_variable cv_;
+      std::atomic<bool> stop_requested_{false};
+      std::atomic<size_t> active_threads_{0};
+      size_t max_queue_size_;
    };
 
    template <is_filesystem_path_convertable T>
