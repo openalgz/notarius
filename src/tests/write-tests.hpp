@@ -55,11 +55,13 @@ static std::chrono::steady_clock::duration ave_async_spdlog_time_result{};
 //
 // In other words file logging alone is enabled for the timing test.
 //
-inline slx::notarius_t<"notarius-results.md"> notarius_logger;
-inline slx::notarius_t<"notarius-redirect.md"> notarius_redirect;
-
+inline slx::notarius_t<"notarius-results.md", notarius_opts_t{.enable_file_logging = true}> notarius_logger;
+inline slx::notarius_t<"notarius-redirect.md", notarius_opts_t{.enable_file_logging = true}> notarius_redirect;
+//
 // A log file containing a summary of results.
-inline slx::notarius_t<"spdlog_vs_notarius_test_results.md"> notarius_results_logger;
+//
+inline slx::notarius_t<"spdlog_vs_notarius_test_results.md", notarius_opts_t{.enable_file_logging = true}>
+   notarius_results_logger;
 
 #ifdef SPDLOG
 inline auto spdlog_logger = spdlog::basic_logger_mt("basic_logger", "spdlog-results.md");

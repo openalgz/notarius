@@ -100,8 +100,8 @@ void run_api_tests()
 
    suite notarius_t_tests = [] {
       "notarius_t print method"_test = [] {
-         notarius_t<> logger;
-         logger.enable_file_logging();
+
+         notarius_t<"test-log-file.md", notarius_opts_t{.enable_file_logging = true}> logger;
          remove_files({logger.logfile_name()});
          logger.print<log_level::none>("Hello, {}", "world\n");
          logger.print<log_level::info>("Hello, {}", "world\n");
@@ -112,10 +112,11 @@ void run_api_tests()
          constexpr auto expected =
             "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
          expect(actual == expected);
+
       };
 
       "notarius_t operator() method"_test = [] {
-         notarius_t<> logger;
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
          logger.enable_file_logging();
          remove_files({logger.logfile_name()});
          logger.operator()<log_level::none>("Hello, {}", "world\n");
@@ -130,8 +131,7 @@ void run_api_tests()
       };
 
       "notarius_t write method"_test = [] {
-         notarius_t<> logger;
-         logger.enable_file_logging();
+         notarius_t<"test-log-file.md", notarius_opts_t{.enable_file_logging = true}> logger;
          remove_files({logger.logfile_name()});
          logger.write<log_level::none>("Hello, {}", "world\n");
          logger.write<log_level::info>("Hello, {}", "world\n");
@@ -145,10 +145,9 @@ void run_api_tests()
       };
 
       "notarius_t cout method"_test = [] {
-         notarius_t<> logger;
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
          logger.enable_stdout();
-         std::ostringstream oss;
-         std_stream_redirection_t redirect(std::cout, oss.rdbuf());
+         std_stream_redirection_t redirect_stdout_to_logger(std::cout, logger.rdbuf());
          logger.cout<log_level::none>("Hello, {}", "world\n");
          logger.cout<log_level::info>("Hello, {}", "world\n");
          logger.cout<log_level::warn>("Hello, {}", "world\n");
@@ -161,10 +160,9 @@ void run_api_tests()
       };
 
       "notarius_t cerr method"_test = [] {
-         notarius_t<> logger;
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
          logger.enable_stderr();
-         std::ostringstream oss;
-         std_stream_redirection_t redirect(std::cerr, oss.rdbuf());
+         std_stream_redirection_t redirect_stdout_to_logger(std::cerr, logger.rdbuf());
          logger.cerr<log_level::none>("Hello, {}", "world\n");
          logger.cerr<log_level::info>("Hello, {}", "world\n");
          logger.cerr<log_level::warn>("Hello, {}", "world\n");
@@ -177,7 +175,7 @@ void run_api_tests()
       };
 
       "notarius_t clog method"_test = [] {
-         notarius_t<> logger;
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
          logger.enable_stdlog();
          std::ostringstream oss;
          std_stream_redirection_t redirect(std::clog, oss.rdbuf());
@@ -193,7 +191,7 @@ void run_api_tests()
       };
 
       "notarius_t operator<< method"_test = [] {
-         notarius_t<> logger;
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
          logger.enable_file_logging();
          remove_files({logger.logfile_name()});
          logger << std::format("Hello, {}", "world\n");
@@ -208,7 +206,7 @@ void run_api_tests()
       };
 
       "notarius_t default options"_test = [] {
-         notarius_t<> logger;
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
          expect(logger.options().enable_stdout == true);
          expect(logger.options().enable_stderr == true);
          expect(logger.options().enable_stdlog == false);
@@ -216,7 +214,7 @@ void run_api_tests()
       };
 
       "notarius_t log to file"_test = [] {
-         slx::notarius_t<"test_log.md"> logger;
+         slx::notarius_t<"test_log.md", notarius_opts_t{}> logger;
          logger.enable_file_logging();
          logger("This is a test log entry.");
          logger.close();

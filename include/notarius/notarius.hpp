@@ -117,11 +117,12 @@ namespace slx
    {
       // Constructor: redirects the stream
       // Parameters:
-      //   - stream: the stream to be redirected (e.g., std::clog)
-      //   - new_buf: pointer to the new stream buffer (e.g., file buffer)
+      //   - this_stream: the stream to be redirected (e.g., std::clog) to 'other_stream'
+      //   - other_stream: pointer to the new stream buffer (e.g., file buffer)
       //
-      std_stream_redirection_t(std::ostream& stream, std::streambuf* new_buf)
-         : redirected_stream_(stream), original_rdbuf_(stream.rdbuf(new_buf))
+      // Redirect
+      std_stream_redirection_t(std::ostream& this_stream, std::streambuf* other_stream)
+         : redirected_stream_(this_stream), original_rdbuf_(this_stream.rdbuf(other_stream))
       {}
 
       // Resets the stream to its original buffer
@@ -176,11 +177,20 @@ namespace slx
    template <typename T>
    concept is_filesystem_path_convertable = requires(T t) { std::filesystem::path(t); };
 
-   // Templated getFileName function
+   template <typename T>
+   concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
+
    template <is_filesystem_path_convertable T>
    std::string get_filename(const T& path)
    {
       return std::filesystem::path(path).filename().string();
+   }
+
+   template <is_filesystem_path_convertable T>
+   std::string get_log_file_path(const T& path)
+   {
+      auto p = std::filesystem::absolute(path);
+      return p.string();
    }
 
    template <bool publish = false>
@@ -213,9 +223,6 @@ namespace slx
          }
       }
    }
-
-   template <typename T>
-   concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
 
    template <int max_file_index = 100>
    inline std::string get_next_available_filename(const std::string_view input_path_name,
@@ -282,7 +289,7 @@ namespace slx
    inline constexpr const char* to_string(const log_level level)
    {
       constexpr std::array<const char*, static_cast<int>(log_level::count)> log_strings = {
-         /*none:*/ "", "info: ", "warn: ", "error: ", "exception: "};
+         /*none:*/ "", "info", "warn", "error", "exception"};
       if (int(level) >= log_strings.size()) return "";
       return log_strings[int(level)];
    }
@@ -290,6 +297,8 @@ namespace slx
    /// @brief Defines default configuration options for the notarius logging system.
    struct notarius_opts_t
    {
+      bool enable_file_logging{false}; ///< Enable logging to file.
+
       bool lock_free_enabled{false}; ///< Flag to enable lock-free logging.
 
       /**
@@ -319,8 +328,6 @@ namespace slx
       bool enable_stderr{true}; ///< Enable logging to standard error.
       bool enable_stdlog{false}; ///< Enable logging to standard log.
       /// @}
-
-      bool enable_file_logging{false}; ///< Enable logging to file.
 
       bool append_to_log{true}; ///< Append to the log file instead of overwriting.
 
@@ -379,23 +386,20 @@ namespace slx
        *
        */
       size_t flush_to_log_at_bytes{1'048'576 * 16}; // 16 MB
-
-      /**
-       * @brief The default extension to use if one is not defined.
-       */
-      std::string default_extension{".log"};
    };
 
    /**
       @brief A logger class for writing log messages to a file.
-      @tparam Name The name of the logger. If not provided, it defaults to 'notatarius'.
+      @tparam LogFileNameOrPath The file or path name of the logger. If not provided, it defaults to 'notatarius'.
       @tparam Options The options for configuring the logger. Defaults to an empty notarius_opts_t struct.
    */
-   template <slx::string_literal Name = "notatarius-log">
+   template <slx::string_literal LogFileNameOrPath, notarius_opts_t Options>
    struct notarius_t final
    {
      private:
-      static constexpr std::string_view file_name_v{Name};
+      static constexpr std::string_view default_logger_name_or_path{LogFileNameOrPath};
+
+      mutable std::string log_output_file_path_{get_log_file_path(default_logger_name_or_path.data())};
 
       mutable std::mutex mutex_; // mutable for const functions.
 
@@ -431,13 +435,11 @@ namespace slx
 
       std::ofstream log_output_stream_;
 
-      std::string log_output_file_path_{create_output_path(file_name_v)};
-
       // Toggle writing to the ostream on/logging_off at some logging point in your code.
       //
       std::atomic_bool toggle_immediate_mode_ = {false};
 
-      notarius_opts_t options_{};
+      notarius_opts_t options_{Options};
 
       // A delegate to forward a log message to. This is run on a separate thread.
       //
@@ -450,12 +452,10 @@ namespace slx
       {
          static thread_local std::string msg;
 
-         if constexpr (level != log_level::none) {
-            msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
-         }
-         else {
+         if constexpr (log_level::none == level)
             msg = std::format(fmt, std::forward<Args>(args)...);
-         }
+         else
+            msg = std::format("{}: {}", to_string(level), std::format(fmt, std::forward<Args>(args)...));
 
          buffer.write(msg.c_str(), msg.size());
 
@@ -583,9 +583,29 @@ namespace slx
      public:
       auto& options() { return options_; }
 
-      auto logfile_path() const { return log_output_file_path_; }
+      std::string logfile_path() const
+      {
+         std::unique_lock lock(mutex_);
+         return log_output_file_path_;
+      }
 
-      auto logfile_name() -> std::string { return std::format("./{}", file_name_v); }
+      std::string set_log_file_path(const std::string_view path)
+      {
+         close();
+         std::unique_lock lock(mutex_);
+         log_output_file_path_ = get_log_file_path(path);
+      }
+
+      std::string logfile_name() const
+      {
+         if (log_output_file_path_.empty()) {
+            log_output_file_path_ = get_log_file_path(std::string(LogFileNameOrPath));
+         }
+         std::unique_lock lock(mutex_);
+         return get_filename(log_output_file_path_);
+      }
+
+      std::string default_extension = ".log"; // a default extension when a user does not use one
 
       std::streambuf* rdbuf()
       {
@@ -641,30 +661,25 @@ namespace slx
       // This results in a significant increase in stdio performance.
       inline static void disable_sync_with_stdio() { std::ios::sync_with_stdio(false); }
 
-      // The following routines manage the log output (file store) path:
-      //
-      inline void check_log_file_path() { create_output_path(log_output_file_path_, file_name_v); }
-
-      inline void create_output_path(std::string& output_path, const std::string_view file_name_v)
+      inline void check_log_file_destination_path(std::string& path)
       {
          namespace fs = std::filesystem;
 
-         if (output_path.empty()) {
-            output_path = std::format("./{}", file_name_v);
+         if (path.empty() || fs::exists(path)) return;
+
+         fs::path p = path;
+
+         fs::path directory = p.parent_path();
+
+         if (directory.empty()) {
+            directory = fs::current_path();
          }
 
-         if (!fs::exists(output_path)) {
-            const auto absolute_path = fs::absolute(output_path);
-            const auto destination_folder = absolute_path.parent_path();
-            if (!fs::exists(destination_folder)) fs::create_directory(destination_folder);
+         if (!fs::exists(directory)) {
+            fs::create_directories(directory);
          }
-      }
 
-      inline auto create_output_path(const std::string_view file_name_v)
-      {
-         std::string p;
-         create_output_path(p, file_name_v);
-         return p;
+         path = fs::absolute(p).string();
       }
 
       inline bool open_log_output_stream()
@@ -673,9 +688,11 @@ namespace slx
             return false;
          }
 
-         check_log_file_path();
+         if (log_output_stream_.is_open()) return true;
 
          if (not log_output_stream_.is_open()) {
+            check_log_file_destination_path(log_output_file_path_);
+
             if (options_.append_to_log)
                log_output_stream_.open(log_output_file_path_, std::ios_base::app);
             else
@@ -693,7 +710,8 @@ namespace slx
                // The following is generally useful for scenarios where immediate
                // and unbuffered output to a file store is helpful, but it can
                // come with performance trade-offs. Since we are buffering the
-               // logging info already, this may be beneficial.
+               // logging by default (see 'std::string logging_store_;'), this 
+               // will usually be beneficial.
                //
                log_output_stream_.rdbuf()->pubsetbuf(0, 0);
             }
@@ -725,7 +743,7 @@ namespace slx
          if constexpr (log_level::none == level)
             msg = std::format(fmt, std::forward<Args>(args)...);
          else
-            msg = to_string(level) + std::format(fmt, std::forward<Args>(args)...);
+            msg = std::format("{}: {}", to_string(level), std::format(fmt, std::forward<Args>(args)...));
 
          if (options_.append_newline_when_missing) {
             if (not msg.empty() and '\n' != msg.back()) {
@@ -745,7 +763,7 @@ namespace slx
             flush_impl();
             if (options_.enable_file_logging) {
                log_output_stream_.close();
-               log_output_file_path_ = get_next_available_filename(log_output_file_path_, options_.default_extension);
+               log_output_file_path_ = get_next_available_filename(log_output_file_path_, default_extension);
             }
          }
 
@@ -863,7 +881,7 @@ namespace slx
       }
 
       template <log_level level = log_level::none, typename... Args>
-      friend auto& operator<<(notarius_t<Name>& notarius, Args&&... args)
+      friend auto& operator<<(notarius_t<LogFileNameOrPath, Options>& notarius, Args&&... args)
       {
          notarius.print<level>("{}", std::forward<Args>(args)...);
          return notarius;
@@ -972,8 +990,7 @@ namespace slx
       auto& change_log_path(const std::string_view new_path)
       {
          std::unique_lock lock(mutex_);
-         log_output_file_path_ = new_path;
-         check_log_file_path();
+         log_output_file_path_ = get_log_file_path(new_path);
          return log_output_file_path_;
       }
 
@@ -992,8 +1009,6 @@ namespace slx
          std::unique_lock lock(mutex_);
          return logging_store_.shrink_to_fit();
       }
-
-      constexpr notarius_t() noexcept = default;
 
       ~notarius_t()
       {

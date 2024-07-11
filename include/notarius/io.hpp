@@ -10,17 +10,70 @@ namespace slx
 {
    namespace io
    {
+      template <typename T>
+      concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
+
+      template <typename T>
+      concept is_filesystem_path_convertable = requires(T t) { std::filesystem::path(t); };
+
+      template <is_filesystem_path_convertable T>
+      std::string get_filename(const T& path)
+      {
+         return std::filesystem::path(path).filename().string();
+      }
+
+      template <bool publish = false>
+      inline void remove_files_by_extension(const std::filesystem::path& directory, const std::string_view extension)
+      {
+         namespace fs = std::filesystem;
+
+         if (fs::exists(directory) && fs::is_directory(directory)) {
+            for (const auto& entry : fs::directory_iterator(directory)) {
+               if (entry.is_regular_file() && entry.path().extension() == extension) {
+                  fs::remove(entry.path());
+                  if constexpr (publish) {
+                     std::cout << "Deleted: " << entry.path() << std::endl;
+                  }
+               }
+            }
+         }
+         else {
+            if constexpr (publish) {
+               std::cerr << "The specified path is not a directory or does not exist." << std::endl;
+            }
+         }
+      }
+
+      inline void remove_files_by_name(const std::vector<std::string>& files)
+      {
+         for (const auto& file : files) {
+            if (std::filesystem::exists(file)) {
+               std::filesystem::remove(file);
+            }
+         }
+      }
+
       template <int max_file_index = 100>
-      inline std::string get_next_available_filename(const std::string_view input_path_name)
+      inline std::string get_next_available_filename(const std::string_view input_path_name,
+                                                     const std::string_view default_extension = ".log")
       {
          const auto max_file_index_exceeded_msg =
             "Warning: The max file limit of " + std::to_string(max_file_index) + " has been reached.";
 
-         if (!std::filesystem::exists(input_path_name)) return {input_path_name.data()};
+         if (!std::filesystem::exists(input_path_name)) return input_path_name.data();
 
          std::filesystem::path p = input_path_name;
-         const std::string directory = p.parent_path().string();
-         const std::string extension = p.extension().string();
+
+         std::string directory = p.parent_path().string();
+         if (directory.empty()) {
+            directory = std::filesystem::current_path().string();
+         }
+
+         std::string extension = p.extension().string();
+         if (extension.empty()) {
+            extension = default_extension;
+         }
+
          std::string filename = p.stem().string();
 
          const size_t last_underscore_pos = filename.find_last_of('_');
