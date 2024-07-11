@@ -6,18 +6,18 @@
 >
 > **Goals:**
 >
-> - It should remain as a single header only (other than STL headers). The only file needed for projects is `notarius.hpp`and a modern C++ library. Although additional files are contained in the `./include/notarius` path, these files are not needed are only provided for test project support.
+> - It should remain as a single header only (other than STL headers). The only file needed for projects is `notarius.hpp`and a modern C++ library. Although additional files are contained in the `./include/notarius` path, these files are not required and are only provided for test project support.
 > - Note that performance is variable across compilers and machines. On Windows it will generally be 2x faster than spdlog and equal to spdlog on Linux and Apple.
 > - Easy to use (e.g., easy configurability of logging instances, and, the implementation of the source code should be easy to read and understand).
 > - Thread safety that can be turned off when not required.
-> - Notarius is easy to modify (i.e., copy the header and erase features your situation does not need to simplify the code even further).
+> - Notarius is easy to modify (i.e., copy the header and erase features your situation does not need to simplify the code even further for your projects).
 
 ------
 
 #### TODOs:
 
-- [ ] Create Documenation, best practices with notarius, provide example use cases, and explain notarius features.
-- [ ] Add Doxygen comments and doxygen configuration file.
+- [ ] Create Documenation, demonstrate best practices with notarius, provide example use cases, and explain notarius features.
+- [ ] Add Doxygen comments and provide a default doxygen configuration file.
 - [ ] Support earlier versions of C++. Currently geared for C++ 20+. This will require std::format and std::format_string replacements. 
 - [ ] Add conditional compilation support to filter out un-needed features.
 - [ ] Continue to improve test cases.
@@ -25,7 +25,7 @@
 
 ------
 
-Notarius is a header-only (the only header dependencies should come from the STL) C++ logging library that provides a flexible and efficient way to handle logging in your applications. It offers the following features:
+Notarius is a (single) header-only C++ logging library that provides a flexible and efficient way to handle logging in your applications. It offers the following features:
 
 - **Log Levels**: Supports different log levels (none, info, warn, error, exception) for controlling the verbosity of logging.
 - **Output Streams**: Allows logging to multiple output streams, including stdout, stderr, and file. Each of these features may be enabled or disabled. 
