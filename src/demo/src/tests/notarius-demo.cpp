@@ -8,8 +8,4 @@ constexpr auto max_lines_count_ = 10;
 
 // I recommend using a Markdown editor for reviewing result files.
 
-int main()
-{
-
-   return 0;
-}
+int main() { return 0; }
