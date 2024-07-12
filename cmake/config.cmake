@@ -49,9 +49,11 @@ endmacro()
 macro(suppress_compiler_warnings)
 
    if (MSVC)
-      target_compile_options(spdlog PRIVATE /W0)
+      if (PROJECT_IS_TOP_LEVEL AND TARGET spdlog)
+         target_compile_options(spdlog PRIVATE /W0)
+      endif()
       add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS)
-
+      
    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU")
       if (PROJECT_IS_TOP_LEVEL AND TARGET spdlog)
          target_compile_options(spdlog PRIVATE -w)
