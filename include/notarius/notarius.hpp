@@ -435,25 +435,45 @@ namespace slx
    }
 
    template <bool publish = false>
-   inline void remove_files_in_directory(const std::filesystem::path& directory, const std::string_view extension)
+   inline int remove_files_in_directory(const std::filesystem::path& directory, const std::string_view extension)
    {
       namespace fs = std::filesystem;
 
-      if (fs::exists(directory) && fs::is_directory(directory)) {
-         for (const auto& entry : fs::directory_iterator(directory)) {
-            if (entry.is_regular_file() && entry.path().extension() == extension) {
-               fs::remove(entry.path());
+      int count_removed{};
+
+      if (!fs::exists(directory) || !fs::is_directory(directory)) {
+         if constexpr (publish) {
+            std::cerr << "The specified path is not a directory or does not exist." << std::endl;
+         }
+         return count_removed;
+      }
+
+      for (const auto& entry : fs::directory_iterator(directory)) {
+         if (!entry.is_regular_file() || entry.path().extension() != extension) {
+            continue;
+         }
+
+         try {
+            if (fs::remove(entry.path())) {
+               ++count_removed;
                if constexpr (publish) {
                   std::cout << "Deleted: " << entry.path() << std::endl;
                }
             }
+            else {
+               if constexpr (publish) {
+                  std::cerr << "Failed to delete: " << entry.path() << std::endl;
+               }
+            }
+         }
+         catch (const std::exception& ex) {
+            if constexpr (publish) {
+               std::cerr << "Error deleting " << entry.path() << ": " << ex.what() << std::endl;
+            }
          }
       }
-      else {
-         if constexpr (publish) {
-            std::cerr << "The specified path is not a directory or does not exist." << std::endl;
-         }
-      }
+
+      return count_removed;
    }
 
    inline void remove_files(const std::vector<std::string>& files)

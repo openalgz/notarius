@@ -1,6 +1,5 @@
 build*
-src/demo/scripts*
-src/demo/cmake*
+src/demo/build*
 compile_commands.json
 
 .vscode

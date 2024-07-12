@@ -899,5 +899,3 @@ macro(configure_main_project name version)
 
 endmacro()
 
-
-

@@ -8,26 +8,18 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# A demo project to start your own project with.
-#
-#[[
-function(generate_demo_project)
-   set(DEST_DIR ${CMAKE_SOURCE_DIR}/src/demo)
-   file(COPY ${CMAKE_SOURCE_DIR}/scripts DESTINATION ${DEST_DIR})
-   file(COPY ${CMAKE_SOURCE_DIR}/cmake DESTINATION ${DEST_DIR})
-endfunction()
-#]]
-
 # Set Your Dependencies Here:
 #
 macro(generate_${PROJECT_NAME})
 
+   message(STATUS "Generating Project: ${PROJECT_NAME}...")
+
    if (PROJECT_IS_TOP_LEVEL)
    
-      # deprecated: generate_demo_project()
-   
-      list(APPEND PROJECT_DEPENDENCIES_LIST "spdlog,  https://github.com/gabime/spdlog.git, v1.13.0")
-      list(APPEND PROJECT_DEPENDENCIES_LIST "ut,      https://github.com/boost-ext/ut.git,  v2.0.1")
+      #list(APPEND PROJECT_DEPENDENCIES_LIST "ut, https://github.com/boost-ext/ut.git, v2.0.1")
+      
+      list(APPEND PROJECT_DEPENDENCIES_LIST "notarius, https://github.com/openalgz/notarius.git, main")
+      list(APPEND PROJECT_DEPENDENCIES_LIST "ut,       https://github.com/openalgz/ut.git,       main")
    
       configure_boost_micro_unit_testing()
 
@@ -53,7 +45,7 @@ macro(suppress_compiler_warnings)
       add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS)
 
    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU")
-      if (PROJECT_IS_TOP_LEVEL AND TARGET spdlog)
+      if (TARGET spdlog)
          target_compile_options(spdlog PRIVATE -w)
       endif()
 

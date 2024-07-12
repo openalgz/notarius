@@ -8,7 +8,7 @@ configure_main_project("demo" "") # blank to aquire/assign version from the git 
                                   # to '1.0.0', etc.                             
 project(
    ${PROJECT_NAME}
-   VERSION "${MY_PROJECT_VERSION}"
+   VERSION "${${PROJECT_NAME}_PROJECT_VERSION}"
    LANGUAGES CXX
 )
 
