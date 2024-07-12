@@ -8,7 +8,6 @@ using namespace slx; // the notarius namespace
 // I recommend using a Markdown editor for reviewing result files.
 
 suite example_notarius_use_cases = [] {
-
    notarius_t<"demo-log.md", notarius_opts_t{.enable_file_logging = true}> demo;
 
    demo.remove_log_file();
