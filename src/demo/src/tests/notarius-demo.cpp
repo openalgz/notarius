@@ -1,11 +1,5 @@
-
-// Test options must be defined prior to 'write-tests.hpp'.
-//
-constexpr auto test_runs_to_perform = 5;
-constexpr auto max_lines_count_ = 10;
-
-#include "ut/ut.hpp"
 #include "notarius/notarius.hpp"
+#include "ut/ut.hpp"
 
 using namespace ut;
 using namespace slx; // the notarius namespace
@@ -13,25 +7,49 @@ using namespace slx; // the notarius namespace
 // Note:
 // I recommend using a Markdown editor for reviewing result files.
 
-suite example_notarius_use_cases = [] { notarius_t<"demo-log.md", notarius_opts_t{.enable_file_logging = true}> demo;
-   
-   demo("Hello World");
-   auto actual = demo.str();
-   expect("Hello World" == actual);
+suite example_notarius_use_cases = [] {
+   notarius_t<"demo-log.md", notarius_opts_t{.enable_file_logging = true}> demo;
 
-   demo("Hello World Again {} {} {} {}", 1.23, 2.23, 3.23, 4.23);
-   auto expected_result = std::format("Hello World Again {} {} {} {}", 1.23, 2.23, 3.23, 4.23);
-   actual = demo.str();
-   expect(actual == expected_result);
+   demo.remove_log_file();
+   {
+      demo("Hello World\n");
+      auto actual = demo.str();
+      expect("Hello World\n" == actual);
 
+      demo("Hello World Again {} {} {} {}\n", 1.23, 2.23, 3.23, 4.23);
+      actual = demo.str();
+      auto expected_result = std::format("Hello World\nHello World Again {} {} {} {}\n", 1.23, 2.23, 3.23, 4.23);
+      expect(actual == expected_result);
+   }
+   demo.remove_log_file();
 
+   demo.remove_log_file();
+   {
+      demo.print("Hello World\n");
+      auto actual = demo.str();
+      expect("Hello World\n" == actual);
 
-   
-   };
+      demo.enable_stdout();
+      demo.write("Hello World Again {} {} {} {}\n", 1.23, 2.23, 3.23, 4.23);
+      actual = demo.str();
+      auto expected_result = std::format("Hello World\nHello World Again {} {} {} {}\n", 1.23, 2.23, 3.23, 4.23);
+      expect(actual == expected_result);
+   }
+   demo.remove_log_file();
+
+   demo.remove_log_file();
+   {
+      demo << "Hello World " << 1.23 << " " << 2.23 << '\n';
+      auto actual = demo.str();
+      auto expected_result = "Hello World 1.23 2.23\n";
+      expect(actual == expected_result);
+      demo.remove_log_file();
+   }
+   demo.remove_log_file();
+};
 
 int main()
 {
-
+   std::cout << '\n';
    return 0;
 }
-
