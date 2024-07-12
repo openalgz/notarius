@@ -22,7 +22,7 @@ namespace slx
          return std::filesystem::path(path).filename().string();
       }
 
-     template <bool publish = false>
+      template <bool publish = false>
       inline int remove_files_by_extension(const std::filesystem::path& directory, const std::string_view extension)
       {
          namespace fs = std::filesystem;
