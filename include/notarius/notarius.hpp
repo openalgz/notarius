@@ -862,11 +862,12 @@ namespace slx
          return log_output_file_path_;
       }
 
-      std::string set_log_file_path(const std::string_view path)
+      [[maybe_unused]] std::string set_log_file_path(const std::string_view path)
       {
          close();
          std::unique_lock lock(mutex_);
          log_output_file_path_ = get_log_file_path(path);
+         return log_output_file_path_;
       }
 
       std::string logfile_name() const
