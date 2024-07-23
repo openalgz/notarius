@@ -1060,6 +1060,60 @@ namespace slx
          print<level>("{}", std::forward<T>(msg));
       }
 
+      template <is_loggable... Args>
+      void info(std::format_string<Args...> fmt, Args&&... args)
+      {
+         print<log_level::info>(fmt, std::forward<Args>(args)...);
+      }
+
+      template <is_loggable T>
+      void info(const T& msg)
+      {
+         print<log_level::info>("{}", msg);
+      }
+
+      template <is_loggable T>
+      void info(T&& msg)
+      {
+         print<log_level::info>("{}", std::forward<T>(msg));
+      }
+
+      template <is_loggable... Args>
+      void warn(std::format_string<Args...> fmt, Args&&... args)
+      {
+         print<log_level::warn>(fmt, std::forward<Args>(args)...);
+      }
+
+      template <is_loggable T>
+      void warn(const T& msg)
+      {
+         print<log_level::warn>("{}", msg);
+      }
+
+      template <is_loggable T>
+      void warn(T&& msg)
+      {
+         print<log_level::warn>("{}", std::forward<T>(msg));
+      }
+
+      template <is_loggable... Args>
+      void error(std::format_string<Args...> fmt, Args&&... args)
+      {
+         print<log_level::error>(fmt, std::forward<Args>(args)...);
+      }
+
+      template <is_loggable T>
+      void error(const T& msg)
+      {
+         print<log_level::error>("{}", msg);
+      }
+
+      template <is_loggable T>
+      void error(T&& msg)
+      {
+         print<log_level::error>("{}", std::forward<T>(msg));
+      }
+
       template <log_level level = log_level::none, is_loggable... Args>
       void operator()(std::format_string<Args...> fmt, Args&&... args)
       {
