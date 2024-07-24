@@ -1274,7 +1274,7 @@ namespace slx
 
             std::ifstream log_buf(log_path().data());
 
-            if (not log_buf) return buffer;
+            if (not log_buf.is_open()) return buffer;
 
             std::unique_lock lock(mutex_);
 
