@@ -23,7 +23,7 @@ using namespace slx;
 
 void run_api_tests()
 {
-   auto test_cleanup = []() {
+   auto test_cleanup = []{
       const std::string filename = "test_log.txt";
       std::filesystem::path p = filename;
 
@@ -59,16 +59,16 @@ void run_api_tests()
          std::ostringstream oss;
          {
             std_stream_redirection_t redirect(std::clog, oss.rdbuf());
-            std::clog << "test";
+            std::clog << "test\n";
          }
-         expect(oss.str() == "test");
+         expect(oss.str() == "test\n");
       };
 
       "std_stream_redirection_t reset"_test = [] {
          std::ostringstream oss;
          std_stream_redirection_t redirect(std::clog, oss.rdbuf());
          redirect.reset();
-         std::clog << "test";
+         std::clog << "test\n";
          expect(oss.str().empty());
       };
    };
