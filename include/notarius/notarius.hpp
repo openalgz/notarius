@@ -416,7 +416,7 @@ namespace slx
       }
 
       // TODO: std::latch
-     
+
       std::vector<std::thread> workers_; ///< The worker threads.
       std::priority_queue<Task> tasks_; ///< The task queue.
       mutable std::mutex queue_mutex_; ///< Mutex for synchronizing access to the task queue.
@@ -594,13 +594,13 @@ namespace slx
       bool enable_stderr{true}; ///< Enable writing to standard error.
       bool enable_stdlog{false}; ///< Enable writing to standard log.
       /// @}
-     
-     /// @name Enable/Disable Standard Outputs' logging
-     /// @{
-     bool log_from_stdout{false}; ///< Enable logging from  standard output.
-     bool log_from_stderr{false}; ///< Enable logging from  standard error.
-     bool log_from_stdlog{false}; ///< Enable logging from  standard log.
-                                /// @}
+
+      /// @name Enable/Disable Standard Outputs' logging
+      /// @{
+      bool log_from_stdout{false}; ///< Enable logging from  standard output.
+      bool log_from_stderr{false}; ///< Enable logging from  standard error.
+      bool log_from_stdlog{false}; ///< Enable logging from  standard log.
+                                   /// @}
 
       bool append_to_log{true}; ///< Append to the log file instead of overwriting.
 
@@ -1154,12 +1154,12 @@ namespace slx
       //
       template <log_level level = log_level::none, bool flush = true, is_loggable... Args>
       void cout(std::format_string<Args...> fmt, Args&&... args)
-     {
-        if (not options_.enable_stdout) return;
-        if (options_.log_from_stdout)
-          print(fmt, std::forward<Args>(args)...);
-        else
-          update_io_buffer<level, flush>(std::cout, fmt, std::forward<Args>(args)...);
+      {
+         if (not options_.enable_stdout) return;
+         if (options_.log_from_stdout)
+            print(fmt, std::forward<Args>(args)...);
+         else
+            update_io_buffer<level, flush>(std::cout, fmt, std::forward<Args>(args)...);
       }
 
       template <log_level level = log_level::none, bool flush = true, is_loggable T>
@@ -1180,12 +1180,12 @@ namespace slx
       //
       template <log_level level = log_level::none, bool flush = true, is_loggable... Args>
       void cerr(std::format_string<Args...> fmt, Args&&... args)
-     {
-        if (not options_.enable_stderr) return;
-        if (options_.log_from_stderr)
-          print(fmt, std::forward<Args>(args)...);
-        else
-          update_io_buffer<level, flush>(std::cout, fmt, std::forward<Args>(args)...);
+      {
+         if (not options_.enable_stderr) return;
+         if (options_.log_from_stderr)
+            print(fmt, std::forward<Args>(args)...);
+         else
+            update_io_buffer<level, flush>(std::cout, fmt, std::forward<Args>(args)...);
       }
 
       template <log_level level = log_level::none, bool flush = true, is_loggable T>
@@ -1205,11 +1205,11 @@ namespace slx
       template <log_level level = log_level::none, bool flush = true, is_loggable... Args>
       void clog(std::format_string<Args...> fmt, Args&&... args)
       {
-        if (not options_.enable_stdlog) return;
-        if (options_.log_from_stdlog)
-          print(fmt, std::forward<Args>(args)...);
-        else
-          update_io_buffer<level, flush>(std::cout, fmt, std::forward<Args>(args)...);
+         if (not options_.enable_stdlog) return;
+         if (options_.log_from_stdlog)
+            print(fmt, std::forward<Args>(args)...);
+         else
+            update_io_buffer<level, flush>(std::cout, fmt, std::forward<Args>(args)...);
       }
 
       template <log_level level = log_level::none, bool flush = true, is_loggable T>

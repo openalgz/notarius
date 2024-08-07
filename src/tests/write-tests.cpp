@@ -23,7 +23,7 @@ using namespace slx;
 
 void run_api_tests()
 {
-   auto test_cleanup = []{
+   auto test_cleanup = [] {
       const std::string filename = "test_log.txt";
       std::filesystem::path p = filename;
 
