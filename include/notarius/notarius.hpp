@@ -569,24 +569,17 @@ namespace slx
 
       /**
        * @brief If immediate_mode is true, all data is written directly
-       *        to enabled standard outputs (std::cout, std::cerr, and std::clog).
-       *        Otherwise, the output is cached until the cache reaches its maximum size,
-       *        at which point the cache associated with a given standard output is flushed.
+       *        to enabled standard outputs (std::cout, std::cerr, and
+       *        std::clog). Otherwise, the output is cached until the
+       *        cache reaches its maximum size, at which point the cache
+       *        associated with a given standard output is flushed.
        */
       bool immediate_mode{true};
 
       /** Note
-       *
-       *  By default, std::cout, std::cerr, and std::clog usually point to the same
-       *  ostream. Therefore, enabling all three may result in duplication of messages
-       *  written to these ostreams when all of them are enabled.
-       *
-       *  Also the following log level filters are applied to the streams (currently
-       *  not configurable):
-       *
-       *  std::cout ->  level <= log_level::warn
-       *  std::cerr ->  level <= log_level::error
-       *  std::clog ->  level <= log_level::none
+       *  By default, std::cout, std::cerr, and std::clog often point to
+       *  the same ostream. Therefore, enabling two or more may result in
+       *  duplication of messages written to your terminal or console.
        */
       /// @name Enable/Disable Standard Outputs
       /// @{
@@ -595,16 +588,21 @@ namespace slx
       bool enable_stdlog{false}; ///< Enable writing to standard log.
       /// @}
 
+      // @brief Enable logging when calling notarius_t::cout, cerr, and clog.
+      //        the default is not write to the log file when using these
+      //        notarius APIs.
+      //
       /// @name Enable/Disable Standard Outputs' logging
       /// @{
-      bool log_from_stdout{false}; ///< Enable logging from  standard output.
-      bool log_from_stderr{false}; ///< Enable logging from  standard error.
-      bool log_from_stdlog{false}; ///< Enable logging from  standard log.
-                                   /// @}
+      bool log_from_stdout{false}; ///< Enable logging from standard output.
+      bool log_from_stderr{false}; ///< Enable logging from standard error.
+      bool log_from_stdlog{false}; ///< Enable logging from standard log.
+      /// @}
 
       bool append_to_log{true}; ///< Append to the log file instead of overwriting.
 
-      bool append_newline_when_missing{false}; ///< Append a newline when missing at the end of a log entry.
+      bool append_newline_when_missing{false}; ///< Append a newline when missing 
+                                               ///< at the end of a log entry.
 
       /**
        * @brief Split log files when they get to a certain size.
@@ -618,16 +616,18 @@ namespace slx
       bool split_log_files{true};
 
       /**
-       * Benefit: Disabling buffering ensures that each write operation to the file is
-       * immediately reflected in the file system. This can be beneficial when you need
-       * to ensure that data is written promptly without waiting for a buffer to fill up.
+       * Benefit: Disabling buffering ensures that each write operation to 
+       * the file is immediately reflected in the file system. This can be 
+       * beneficial when you need to ensure that data is written promptly 
+       * without waiting for a buffer to fill up.
        *
-       * Trade-off: The immediate write approach can lead to increased system call overhead.
-       * Each write operation results in a system call to write data to the file, which can
-       * be relatively slow compared to writing to an in-memory buffer.
+       * Trade-off: The immediate write approach can lead to increased 
+       * system call overhead. Each write operation results in a system
+       * call to write data to the file, which can be relatively slow 
+       * compared to writing to an in-memory buffer.
        *
-       * Therefore the performance of this feature is effected by your 'flush_to_log_at_bytes'
-       * size.
+       * Therefore the performance of this feature is effected by your 
+       * 'flush_to_log_at_bytes' size.
        */
       bool disable_file_buffering{true};
 
