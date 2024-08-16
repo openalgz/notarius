@@ -601,7 +601,7 @@ namespace slx
 
       bool append_to_log{true}; ///< Append to the log file instead of overwriting.
 
-      bool append_newline_when_missing{false}; ///< Append a newline when missing 
+      bool append_newline_when_missing{false}; ///< Append a newline when missing
                                                ///< at the end of a log entry.
 
       /**
@@ -616,17 +616,17 @@ namespace slx
       bool split_log_files{true};
 
       /**
-       * Benefit: Disabling buffering ensures that each write operation to 
-       * the file is immediately reflected in the file system. This can be 
-       * beneficial when you need to ensure that data is written promptly 
+       * Benefit: Disabling buffering ensures that each write operation to
+       * the file is immediately reflected in the file system. This can be
+       * beneficial when you need to ensure that data is written promptly
        * without waiting for a buffer to fill up.
        *
-       * Trade-off: The immediate write approach can lead to increased 
+       * Trade-off: The immediate write approach can lead to increased
        * system call overhead. Each write operation results in a system
-       * call to write data to the file, which can be relatively slow 
+       * call to write data to the file, which can be relatively slow
        * compared to writing to an in-memory buffer.
        *
-       * Therefore the performance of this feature is effected by your 
+       * Therefore the performance of this feature is effected by your
        * 'flush_to_log_at_bytes' size.
        */
       bool disable_file_buffering{true};
