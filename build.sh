@@ -5,7 +5,7 @@ scripts_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 if [[ $scripts_dir == */scripts ]]; 
 then
     #
-    # Remove '/scripts' from the end of scripts_dir to get the soul directory
+    # Remove '/scripts' from the end of scripts_dir to get your project directory
     #
     project_dir="${project_dir%/scripts}"
 else
@@ -29,7 +29,7 @@ cmake_generator="${DEFAULT_CMAKE_GENERATOR}"
 parallel_jobs=2
 target_name="notarius"
 
-# Call if you need to check these paths
+# Call to see the defined paths:
 verify_paths()
 {
   echo "${target_name}: ${project_dir}"
@@ -43,6 +43,7 @@ echo parallel_jobs
 
 # Function to show the script usage.
 show_usage() {
+  clear
   echo -e "\n${i_yellow}Example Usage:${i_purple} $0 ${i_white}{Optional Args: ${i_purple}-c -b ${i_white}{config}${i_purple} -t ${i_white}{target_name}${i_white}}${i_def}" \
           "\n  -h or --help                    ${i_green}# Display help documentation.${i_def}" \
           "\n  -c or --clean                   ${i_green}# Removes the '${build_dir}' directory${i_def}" \
@@ -74,7 +75,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     -h|--help)
-      clear
       show_usage
       exit 1
       ;;
@@ -88,8 +88,6 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-
-# If no clean argument is provided or an invalid argument is provided, continue with the build process
 show_usage
 sleep 2
 
