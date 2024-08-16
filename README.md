@@ -6,11 +6,11 @@
 >
 > **Goals:**
 >
-> - It should remain as a single header only (other than STL headers). The only file needed for projects is `notarius.hpp`and a modern C++ library. Although additional files are contained in the `./include/notarius` path, these files are not required and are only provided for test project support.
+> - It should remain as a single header only (other than STL headers). The only file needed for projects is `notarius.hpp` and a modern C++ library. Although additional files are contained in the `./include/notarius` path, these files are not required and are only provided for test project support.
 > - Note that performance is variable across compilers and machines. On Windows it will generally be 2x faster than spdlog and near equal to spdlog on Linux and Apple.
 > - Easy to use (e.g., easy configurability of logging instances, and, the implementation of the source code should be easy to read and understand).
 > - Thread safety that can be turned off when not required.
-> - Notarius is easy to modify use it as a starting point for your own custom logger.
+> - Notarius is easy to modify and may be used as a starting point for your own custom logger.
 
 ------
 
