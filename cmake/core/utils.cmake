@@ -618,102 +618,86 @@ endfunction()
 # Tries to get a tag or branch name.
 #
 function(generate_git_version_include project_name project_url project_description template_path)
+    
+    string(TIMESTAMP CURRENT_DATE "%Y-%m-%d")
+    string(SUBSTRING ${CURRENT_DATE} 2 2 YY)
+    string(SUBSTRING ${CURRENT_DATE} 5 2 MM)
+    string(SUBSTRING ${CURRENT_DATE} 8 2 DD)
 
-   string(TIMESTAMP CURRENT_DATE "%Y-%m-%d")
-   string(SUBSTRING ${CURRENT_DATE} 2 2 YY)
-   string(SUBSTRING ${CURRENT_DATE} 5 2 MM)
-   string(SUBSTRING ${CURRENT_DATE} 8 2 DD)
+    # Retrieve Git branch name (for diagnostics)
+    execute_process(
+        COMMAND git rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        OUTPUT_VARIABLE GIT_BRANCH_NAME
+        ERROR_VARIABLE git_branch_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE git_branch_result
+    )
 
-   # Retrieve Git branch name
-   execute_process(
-       COMMAND git rev-parse --abbrev-ref HEAD
-       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-       OUTPUT_VARIABLE GIT_VERSION_TAG
-       ERROR_VARIABLE git_branch_error
-       OUTPUT_STRIP_TRAILING_WHITESPACE
-       RESULT_VARIABLE git_branch_result
-   )
+    if(SHOW_DIAGNOSTICS AND git_branch_result EQUAL 0)
+        message("Git Branch Name: ${GIT_BRANCH_NAME}")
+    endif()
+    
+    if(NOT DEFINED PROJECT_SOURCE_DIR OR "${PROJECT_SOURCE_DIR}" STREQUAL "")
+        set(PROJECT_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}")
+    endif()
 
-   if(SHOW_DIAGNOSTICS AND git_branch_result EQUAL 0)
-       message("Git Branch Name: ${GIT_VERSION_TAG}")
-   endif()
+    # Retrieve latest Git tag
+    execute_process(
+        COMMAND git describe --tags --abbrev=0
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        OUTPUT_VARIABLE GIT_VERSION_TAG
+        ERROR_VARIABLE git_tag_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE git_tag_result
+    )
+    
+    message("PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
+    message(STATUS "---------------- Ensuring version tag is well formed: ${GIT_VERSION_TAG}")
 
-   # Retrieve latest Git tag
-   execute_process(
-       COMMAND git describe --tags --abbrev=0
-       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-       OUTPUT_VARIABLE GIT_VERSION_TAG
-       ERROR_VARIABLE git_tag_error
-       OUTPUT_STRIP_TRAILING_WHITESPACE
-       RESULT_VARIABLE git_tag_result
-   )
+    if(SHOW_DIAGNOSTICS AND git_tag_result EQUAL 0)
+        message("Latest Git Tag: '${GIT_VERSION_TAG}'")
+    endif()
 
-   if(SHOW_DIAGNOSTICS AND git_tag_result EQUAL 0)
-       message("Latest Git Tag: ${GIT_VERSION_TAG}")
-   endif()
+    # Check if GIT_VERSION_TAG is well-formed
+    string(REGEX MATCH "v([0-9]+)\\.([0-9]+)\\.([0-9]+)" version_match "${GIT_VERSION_TAG}")
 
-   if ((NOT git_branch_result EQUAL 0 AND NOT git_tag_result EQUAL 0) OR GIT_VERSION_TAG STREQUAL "")
-      set(GIT_VERSION_TAG "v${YY}.${MM}.${DD}")
-   endif()
-  
-   set(MY_PROJECT_VERSION "${GIT_VERSION_TAG}" CACHE INTERNAL "" FORCE)
-   string(REGEX MATCH "v([0-9]+)\\.([0-9]+)\\.([0-9]+)" version_match "${GIT_VERSION_TAG}")
-   
-   if(version_match)
-       set(MY_PROJECT_VERSION_MAJOR ${CMAKE_MATCH_1} CACHE INTERNAL "" FORCE)
-       set(MY_PROJECT_VERSION_MINOR ${CMAKE_MATCH_2} CACHE INTERNAL "" FORCE)
-       set(MY_PROJECT_VERSION_PATCH ${CMAKE_MATCH_3} CACHE INTERNAL "" FORCE)
-   endif()
-   
-   set(MY_PROJECT_VERSION ${MY_PROJECT_VERSION} CACHE INTERNAL "" FORCE)
-   set(MY_PROJECT_NAME "${project_name}" CACHE INTERNAL "" FORCE)
-   set(MY_PROJECT_DESCRIPTION  "${project_description}" CACHE INTERNAL "" FORCE)
-   set(MY_PROJECT_HOMEPAGE_URL "${project_url}" CACHE INTERNAL "" FORCE)
-   set(MY_PROJECT_COMPANY_URL "https://github.com/openalgz" CACHE INTERNAL "" FORCE)
-   set(MY_COPYRIGHT "(c) Open Source Team Tools 2024" CACHE INTERNAL "" FORCE)
-   
-   string(REPLACE ".in.hpp" ".hpp" output_path "${template_path}")
+    if(NOT version_match OR GIT_VERSION_TAG STREQUAL "")
+        # Tag is not well-formed or empty, use date-based version tag
+        set(GIT_VERSION_TAG "v${YY}.${MM}.${DD}")
+    endif()
 
-   if (EXISTS "${template_path}")
-     configure_file("${template_path}" "${output_path}" @ONLY)
-   else()
-     message(FATAL_ERROR "Missing Input Template. Expected Path: '${template_path}'")
-   endif()  
-   
-   set(GIT_VERSION_TAG ${GIT_VERSION_TAG} CACHE INTERNAL "" FORCE)
-   
-endfunction()
+    set(MY_PROJECT_VERSION "${GIT_VERSION_TAG}" CACHE INTERNAL "" FORCE)
+    # Extract version numbers
+    string(REGEX MATCH "v([0-9]+)\\.([0-9]+)\\.([0-9]+)" version_match "${GIT_VERSION_TAG}")
+    
+    if(version_match)
+        set(MY_PROJECT_VERSION_MAJOR ${CMAKE_MATCH_1} CACHE INTERNAL "" FORCE)
+        set(MY_PROJECT_VERSION_MINOR ${CMAKE_MATCH_2} CACHE INTERNAL "" FORCE)
+        set(MY_PROJECT_VERSION_PATCH ${CMAKE_MATCH_3} CACHE INTERNAL "" FORCE)
+    else()
+        # Set default version numbers if matching fails
+        set(MY_PROJECT_VERSION_MAJOR 0 CACHE INTERNAL "" FORCE)
+        set(MY_PROJECT_VERSION_MINOR 0 CACHE INTERNAL "" FORCE)
+        set(MY_PROJECT_VERSION_PATCH 0 CACHE INTERNAL "" FORCE)
+    endif()
+    
+    set(MY_PROJECT_NAME "${project_name}" CACHE INTERNAL "" FORCE)
+    set(MY_PROJECT_DESCRIPTION  "${project_description}" CACHE INTERNAL "" FORCE)
+    set(MY_PROJECT_HOMEPAGE_URL "${project_url}" CACHE INTERNAL "" FORCE)
+    set(MY_PROJECT_COMPANY_URL "https://github.com/openalgz" CACHE INTERNAL "" FORCE)
+    set(MY_COPYRIGHT "(c) Open Source Team Tools 2024" CACHE INTERNAL "" FORCE)
+    
+    string(REPLACE ".in.hpp" ".hpp" output_path "${template_path}")
 
-function(force_project_version version project_name url description template_path)
-
-   set(GIT_VERSION_TAG "v${version}")
-   set(MY_PROJECT_VERSION "${GIT_VERSION_TAG}" CACHE INTERNAL "" FORCE)
-   string(REGEX MATCH "v([0-9]+)\\.([0-9]+)\\.([0-9]+)" version_match "${GIT_VERSION_TAG}")
-   
-   if(version_match)
-       set(MY_PROJECT_VERSION_MAJOR ${CMAKE_MATCH_1} CACHE INTERNAL "" FORCE)
-       set(MY_PROJECT_VERSION_MINOR ${CMAKE_MATCH_2} CACHE INTERNAL "" FORCE)
-       set(MY_PROJECT_VERSION_PATCH ${CMAKE_MATCH_3} CACHE INTERNAL "" FORCE)
-   endif()
-   
-   set(MY_PROJECT_VERSION ${MY_PROJECT_VERSION} CACHE INTERNAL "" FORCE)
-
-   set(MY_PROJECT_NAME "${project_name}" CACHE INTERNAL "" FORCE)
-   set(MY_PROJECT_DESCRIPTION  "${description}" CACHE INTERNAL "" FORCE)
-   set(MY_PROJECT_HOMEPAGE_URL "${url}" CACHE INTERNAL "" FORCE)
-   set(MY_PROJECT_COMPANY_URL "https://github.com/openalgz" CACHE INTERNAL "" FORCE)
-   set(MY_COPYRIGHT "(c) Open Source Team Tools 2024" CACHE INTERNAL "" FORCE)
-
-   string(REPLACE ".in.hpp" ".hpp" output_path "${template_path}")
-   
-   if (EXISTS "${template_path}")
-     configure_file("${template_path}" "${output_path}" @ONLY)
-   else()
-     message(FATAL_ERROR "Missing Input Template. Expected Path: '${template_path}'")
-   endif()  
-   
-   set(GIT_VERSION_TAG ${GIT_VERSION_TAG} CACHE INTERNAL "" FORCE)
-   
+    if (EXISTS "${template_path}")
+        configure_file("${template_path}" "${output_path}" @ONLY)
+    else()
+        message(FATAL_ERROR "Missing Input Template. Expected Path: '${template_path}'")
+    endif()  
+    
+    set(GIT_VERSION_TAG ${GIT_VERSION_TAG} CACHE INTERNAL "" FORCE)
+    
 endfunction()
 
 function(show_project_manifest)
@@ -850,8 +834,6 @@ macro(configure_main_project name version)
 
    if(NOT DEFINED version OR "${version}" STREQUAL "")
    
-       message(STATUS "---------------- Ensuring version tag is well formed: ${GIT_VERSION_TAG}")
-       
        generate_git_version_include("${name}" "${PROJECT_URL}" "${PROJECT_DESCRIPTION}" "${include_dir}/${name}/version.in.hpp")
        
        # Remove leading 'v' if present
