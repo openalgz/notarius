@@ -44,9 +44,15 @@ namespace slx
          const int64_t nanoseconds = duration_ns % ns_per_ms;
 
          if (nanoseconds > 0) {
-            return std::format("{:02}<span style = \"color:#B22222\">m</span> {:02}<span style = \"color:#B22222\">s</span> {:03}<span style = \"color:#B22222\">ms</span> {:09}<span style = \"color:#B22222\">ns</span>", minutes, seconds, milliseconds, nanoseconds);
+            return std::format(
+               "{:02}<span style = \"color:#B22222\">m</span> {:02}<span style = \"color:#B22222\">s</span> {:03}<span "
+               "style = \"color:#B22222\">ms</span> {:09}<span style = \"color:#B22222\">ns</span>",
+               minutes, seconds, milliseconds, nanoseconds);
          }
-         return std::format("{:02}<span style = \"color:#B22222\">m</span> {:02}<span style = \"color:#B22222\">s</span> {:03}<span style = \"color:#B22222\">ms</span>", minutes, seconds, milliseconds);
+         return std::format(
+            "{:02}<span style = \"color:#B22222\">m</span> {:02}<span style = \"color:#B22222\">s</span> {:03}<span "
+            "style = \"color:#B22222\">ms</span>",
+            minutes, seconds, milliseconds);
       }
 
       // returns: yyyymmdd::hh:mm:ss
