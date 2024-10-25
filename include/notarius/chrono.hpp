@@ -42,10 +42,11 @@ namespace slx
          duration_ns %= ns_per_sec;
          const int64_t milliseconds = duration_ns / ns_per_ms;
          const int64_t nanoseconds = duration_ns % ns_per_ms;
+
          if (nanoseconds > 0) {
-            return std::format("{}m {}s {}ms {}ns", minutes, seconds, milliseconds, nanoseconds);
+            return std::format("{:02}m {:02}s {:03}ms {:09}ns", minutes, seconds, milliseconds, nanoseconds);
          }
-         return std::format("{}m {}s {}ms", minutes, seconds, milliseconds);
+         return std::format("{:02}m {:02}s {:03}ms", minutes, seconds, milliseconds);
       }
 
       // returns: yyyymmdd::hh:mm:ss

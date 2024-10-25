@@ -2,6 +2,7 @@
 
 #include <array>
 #include <barrier>
+#include <cassert>
 #include <charconv>
 #include <condition_variable>
 #include <deque>
@@ -260,6 +261,35 @@ namespace slx
       thread_pool_t(thread_pool_t&&) = delete;
       thread_pool_t& operator=(thread_pool_t&&) = delete;
 
+     private:
+      void remove_oldest_task_(std::priority_queue<Task>& tasks)
+      {
+         if (tasks.empty()) return;
+
+         // Move all tasks to a temporary vector
+         std::vector<Task> temp_tasks;
+         while (!tasks.empty()) {
+            temp_tasks.push_back(tasks.top());
+            tasks.pop();
+         }
+
+         // Find the oldest task (based on enqueue_time)
+         auto oldest_task = std::min_element(temp_tasks.begin(), temp_tasks.end(), [](const Task& a, const Task& b) {
+            return a.enqueue_time < b.enqueue_time;
+         });
+
+         // Remove the oldest task from the temporary vector
+         if (oldest_task != temp_tasks.end()) {
+            temp_tasks.erase(oldest_task);
+         }
+
+         // Rebuild the priority queue from the remaining tasks
+         for (const auto& task : temp_tasks) {
+            tasks.push(task);
+         }
+      }
+
+     public:
       /**
        * @brief Enqueues a task into the thread pool.
        * @tparam F The type of the function.
@@ -285,7 +315,10 @@ namespace slx
                throw std::runtime_error("enqueue on stopped thread_pool_t");
             }
             if (tasks_.size() >= max_queue_size_) {
-               throw std::runtime_error("Task queue is full");
+               assert(false && "You should increase your thread pool size!");
+               remove_oldest_task_(tasks_);
+               // std::priority_queue<Task> empty;
+               // std::swap(tasks_, empty);
             }
             tasks_.emplace(Task(
                [task = std::move(task)]() {
@@ -311,7 +344,7 @@ namespace slx
        * @brief Stops the thread pool and optionally waits for all tasks to complete.
        * @param wait_for_tasks If true, waits for all tasks to complete before stopping.
        */
-      void stop(bool wait_for_tasks = true)
+      void stop(const bool wait_for_tasks = true)
       {
          {
             std::unique_lock lock(queue_mutex_);
@@ -383,7 +416,7 @@ namespace slx
       bool is_stopped() const
       {
          std::unique_lock lock(queue_mutex_);
-         return stop_requested_;
+         return stop_requested_.load();
       }
 
      private:
@@ -397,8 +430,8 @@ namespace slx
                std::optional<Task> task;
                {
                   std::unique_lock lock(queue_mutex_);
-                  cv_.wait(lock, [this] { return !tasks_.empty() || stop_requested_; });
-                  if (stop_requested_ && tasks_.empty()) {
+                  cv_.wait(lock, [this] { return !tasks_.empty() || stop_requested_.load(); });
+                  if (stop_requested_.load() && tasks_.empty()) {
                      return;
                   }
                   if (!tasks_.empty()) {
@@ -421,7 +454,7 @@ namespace slx
       std::priority_queue<Task> tasks_; ///< The task queue.
       mutable std::mutex queue_mutex_; ///< Mutex for synchronizing access to the task queue.
       std::condition_variable cv_; ///< Condition variable for notifying worker threads.
-      std::atomic<bool> stop_requested_{false}; ///< Flag indicating if the thread pool is stopped.
+      std::atomic_bool stop_requested_{false}; ///< Flag indicating if the thread pool is stopped.
       std::atomic<size_t> active_threads_{0}; ///< The number of active threads.
       size_t max_queue_size_; ///< The maximum size of the task queue.
    };
@@ -542,8 +575,9 @@ namespace slx
        warn,        ///< Warning log level: label is 'warn'.
        error,       ///< Error log level: label is 'error'.
        exception,   ///< Exception log level: label is 'exception'.
-       count        ///< Sentinel value. Must be the last value in the enumeration.
-
+       //
+       ignore       ///< Sentinel value. Must be the last value in the enumeration.
+       //
        // When adding or modifying this you must also update 'to_string(const log_level level)'
        // defined below.
    };
@@ -554,8 +588,8 @@ namespace slx
     */
    inline constexpr const char* to_string(const log_level level)
    {
-      constexpr std::array<const char*, static_cast<int>(log_level::count)> log_strings = {/*none:*/ "", "info", "warn",
-                                                                                           "error", "exception"};
+      constexpr std::array<const char*, static_cast<int>(log_level::ignore)> log_strings = {
+         /*none:*/ "", "info", "warn", "error", "exception"};
       if (int(level) >= log_strings.size()) return "";
       return log_strings[int(level)];
    }
@@ -674,7 +708,7 @@ namespace slx
 
       mutable std::string log_output_file_path_{get_log_file_path(default_logger_name_or_path.data())};
 
-      mutable std::shared_mutex mutex_; // mutable for const functions.
+      std::shared_ptr<std::shared_mutex> mutex_ = std::make_shared<std::shared_mutex>();
 
       // Ensure at least 2 threads on single-core system...otherwise use half of
       // the available hardware threads.
@@ -692,7 +726,7 @@ namespace slx
       std::string cerr_store_;
       std::string clog_store_;
 
-      std::atomic<bool> reserve_once{true};
+      std::atomic_bool reserve_once{true};
 
       void reserve_store_capacities()
       {
@@ -721,7 +755,37 @@ namespace slx
 
       notarius_opts_t options_{Options};
 
-      std::shared_mutex& get_mutex() { return mutex_; }
+      std::shared_ptr<std::shared_mutex> get_mutex() { return mutex_; }
+
+      // Method to get a unique lock for exclusive write access
+      std::unique_lock<std::shared_mutex> get_exclusive_write_lock()
+      {
+         return std::unique_lock<std::shared_mutex>(*mutex_);
+      }
+
+      // Method to get a shared lock for shared read access
+      std::shared_lock<std::shared_mutex> get_shared_read_lock()
+      {
+         return std::shared_lock<std::shared_mutex>(*mutex_);
+      }
+
+      // Method to try acquiring an exclusive write lock with retries
+      std::optional<std::unique_lock<std::shared_mutex>> try_exclusive_write_lock(const int max_attempts = 3,
+                                                                                  const int delay_ms = 10)
+      {
+         std::unique_lock<std::shared_mutex> cs(*mutex_, std::try_to_lock);
+
+         for (int attempts = 0; !cs.owns_lock() && attempts < max_attempts; ++attempts) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+            if (cs.try_lock()) break;
+         }
+
+         if (cs.owns_lock()) {
+            return std::optional<std::unique_lock<std::shared_mutex>>(std::move(cs));
+         }
+
+         return std::nullopt;
+      }
 
       // A delegate to forward a log message to. This is run on a separate thread.
       //
@@ -865,26 +929,26 @@ namespace slx
      public:
       auto& options() { return options_; }
 
-      std::string logfile_path() const
+      std::string logfile_path()
       {
-         std::unique_lock lock(mutex_);
+         auto lock = get_shared_read_lock();
          return log_output_file_path_;
       }
 
       [[maybe_unused]] std::string set_log_file_path(const std::string_view path)
       {
          close();
-         std::unique_lock lock(mutex_);
+         auto lock = get_exclusive_write_lock();
          log_output_file_path_ = get_log_file_path(path);
          return log_output_file_path_;
       }
 
-      std::string logfile_name() const
+      std::string logfile_name()
       {
          if (log_output_file_path_.empty()) {
             log_output_file_path_ = get_log_file_path(std::string(LogFileNameOrPath));
          }
-         std::unique_lock lock(mutex_);
+         auto lock = get_shared_read_lock();
          return get_filename(log_output_file_path_);
       }
 
@@ -896,49 +960,17 @@ namespace slx
          return log_output_stream_.rdbuf();
       }
 
-      void pause_file_logging()
-      {
-         std::unique_lock lock(mutex_);
-         options_.enable_file_logging = false;
-      }
-      void enable_file_logging()
-      {
-         std::unique_lock lock(mutex_);
-         options_.enable_file_logging = true;
-      }
+      void pause_file_logging() { options_.enable_file_logging = false; }
+      void enable_file_logging() { options_.enable_file_logging = true; }
 
-      void pause_stdout()
-      {
-         std::unique_lock lock(mutex_);
-         options_.enable_stdout = false;
-      }
-      void enable_stdout()
-      {
-         std::unique_lock lock(mutex_);
-         options_.enable_stdout = true;
-      }
+      void pause_stdout() { options_.enable_stdout = false; }
+      void enable_stdout() { options_.enable_stdout = true; }
 
-      void pause_stderr()
-      {
-         std::unique_lock lock(mutex_);
-         options_.enable_stderr = false;
-      }
-      void enable_stderr()
-      {
-         std::unique_lock lock(mutex_);
-         options_.enable_stderr = true;
-      }
+      void pause_stderr() { options_.enable_stderr = false; }
+      void enable_stderr() { options_.enable_stderr = true; }
 
-      void pause_stdlog()
-      {
-         std::unique_lock lock(mutex_);
-         options_.enable_stdlog = false;
-      }
-      void enable_stdlog()
-      {
-         std::unique_lock lock(mutex_);
-         options_.enable_stdlog = true;
-      }
+      void pause_stdlog() { options_.enable_stdlog = false; }
+      void enable_stdlog() { options_.enable_stdlog = true; }
 
       // This should be called at the beginning of main() or when the logger is created.
       // This results in a significant increase in stdio performance.
@@ -1010,7 +1042,7 @@ namespace slx
       template <log_level level = log_level::none, is_loggable... Args>
       void print(std::format_string<Args...> fmt, Args&&... args)
       {
-         std::unique_lock cs(mutex_, std::defer_lock);
+         std::unique_lock<std::shared_mutex> cs(*mutex_, std::defer_lock);
 
          if (not options_.lock_free_enabled) {
             cs.lock();
@@ -1049,12 +1081,11 @@ namespace slx
                log_output_file_path_ = get_next_available_filename(log_output_file_path_, default_extension);
             }
          }
-
-         if (logging_store_.size() >= options_.flush_to_log_at_bytes) {
+         else if (logging_store_.size() >= options_.flush_to_log_at_bytes) {
             flush_impl();
          }
 
-         logging_store_.append({msg});
+         logging_store_.append(std::move(msg));
       }
 
       template <log_level level = log_level::none, is_loggable T>
@@ -1235,11 +1266,8 @@ namespace slx
 
       void flush()
       {
-         if (logging_store_.empty()) return;
-         std::unique_lock cs(mutex_, std::try_to_lock);
-         if (not cs.owns_lock()) {
-            return;
-         }
+         auto lock = try_exclusive_write_lock();
+         if (not lock or logging_store_.empty()) return;
          flush_impl();
       }
 
@@ -1247,8 +1275,9 @@ namespace slx
       //       of the existing file WILL BE DESTROYED!.
       void append_mode(const bool enable)
       {
-         if (enable == options_.append_to_log) return;
-         std::unique_lock lock(mutex_);
+         if (enable == options_.append_to_log)
+            return; // only process when there has been a change in state (i.e., enable to dis-able or vise versa)
+         auto lock = get_exclusive_write_lock();
          close();
          options_.append_to_log = enable;
       }
@@ -1257,7 +1286,7 @@ namespace slx
 
       void close()
       {
-         std::unique_lock lock(mutex_);
+         auto lock = get_exclusive_write_lock();
          flush_impl();
          log_output_stream_.close();
       }
@@ -1268,7 +1297,7 @@ namespace slx
 
          close();
 
-         std::unique_lock lock(mutex_);
+         auto lock = get_exclusive_write_lock();
 
          if (fs::exists(log_output_file_path_)) {
             try {
@@ -1281,31 +1310,28 @@ namespace slx
          logging_store_.clear();
       }
 
-      auto size() const { return logging_store_.size(); }
+      auto size() const
+      {
+         auto lock = get_shared_read_lock();
+         return logging_store_.size();
+      }
 
       auto& write_string(std::string& buffer)
       {
          try {
             close();
 
-            buffer = "";
-
             std::ifstream log_buf(log_path().data());
+            if (!log_buf.is_open()) return buffer;
 
-            if (not log_buf.is_open()) return buffer;
+            auto lock = get_shared_read_lock(); // Acquire read lock if file is open
 
-            std::unique_lock lock(mutex_);
-
-            std::ostringstream os;
-
-            os << log_buf.rdbuf();
-
-            // cast 'os' to an rvalue reference, allowing the move
-            // constructor of std::string to be invoked.
+            // Using string constructor directly with rdbuf for more efficient handling
             //
-            buffer = {std::move(os).str()};
+            buffer = std::string(std::istreambuf_iterator<char>(log_buf), std::istreambuf_iterator<char>());
          }
          catch (...) {
+            assert(false && "'write_string': Unexpected Exception!");
             return buffer;
          }
          return buffer;
@@ -1319,40 +1345,48 @@ namespace slx
 
       void clear()
       {
-         std::unique_lock lock(mutex_);
+         auto lock = get_exclusive_write_lock();
          logging_store_.clear();
       }
 
       // Capacity at which the logging buffer will be forced to flush.
       //
-      auto capacity() const { return logging_store_.capacity(); }
-
-      const std::string_view log_path() const
+      auto capacity() const
       {
-         std::unique_lock lock(mutex_);
+         auto lock = get_shared_read_lock();
+         return logging_store_.capacity();
+      }
+
+      const std::string_view log_path()
+      {
+         auto lock = get_shared_read_lock();
          return log_output_file_path_;
       }
 
       auto& change_log_path(const std::string_view new_path)
       {
-         std::unique_lock lock(mutex_);
+         auto lock = get_exclusive_write_lock();
          log_output_file_path_ = get_log_file_path(new_path);
          return log_output_file_path_;
       }
 
       auto resize(const size_t size)
       {
-         std::unique_lock lock(mutex_);
+         auto lock = get_exclusive_write_lock();
          return logging_store_.resize(size);
       }
 
       auto reset() { clear(); }
 
-      auto empty() const { return logging_store_.empty(); }
+      auto empty() const
+      {
+         auto lock = get_shared_read_lock();
+         return logging_store_.empty();
+      }
 
       auto shrink_to_fit()
       {
-         std::unique_lock lock(mutex_);
+         auto lock = get_exclusive_write_lock();
          return logging_store_.shrink_to_fit();
       }
 
@@ -1362,6 +1396,7 @@ namespace slx
             close();
          }
          catch (...) {
+            assert(false && "'~notarius_t' Unexpected Exception in notarius_t!");
          }
       }
    };
