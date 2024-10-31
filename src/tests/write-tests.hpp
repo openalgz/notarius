@@ -250,8 +250,7 @@ inline void report_final_results()
    const auto ave_async_spdlog = write_ave_duration_message(ave_async_spdlog_time_result);
    const auto ave_async_notarius = write_ave_duration_message(ave_async_notarius_time_result);
    constexpr auto summary =
-      "\n> [!NOTE]\n>**Summary of Results (Avg. Time):**\n>\n>------\n&nbsp;&nbsp;&nbsp;spdlog: {}; async: "
-      "{}\nnotarius: {}; async: "
+      "\n> [!NOTE]\n>**Summary of Results (Avg. Time):**\n>\n>------\n&nbsp;&nbsp;&nbsp;spdlog: {}; async: {}\nnotarius: {}; async: "
       "{}\n";
    notarius_results_logger(summary, ave_spdlog, ave_async_spdlog, ave_notarius, ave_async_notarius);
    notarius_results_logger.close();

@@ -1,10 +1,17 @@
 #pragma once
 
+#ifdef NOTARIUS_MODULE
+module notarius;
+#endif
+
+#include <algorithm>
 #include <array>
 #include <barrier>
 #include <cassert>
 #include <charconv>
+#include <compare>
 #include <condition_variable>
+#include <cstddef>
 #include <deque>
 #include <filesystem>
 #include <format>
@@ -22,6 +29,7 @@
 #include <string_view>
 #include <system_error>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 namespace slx
@@ -60,27 +68,66 @@ namespace slx
     */
    using sv = std::string_view;
 
+#ifdef NOTARIUS_MODULE
    template <size_t N>
    struct string_literal
    {
       static constexpr size_t length = (N > 0) ? (N - 1) : 0;
 
       constexpr size_t size() const noexcept { return length; }
-
       constexpr string_literal() noexcept = default;
-
       constexpr string_literal(const char (&str)[N]) noexcept { std::copy_n(str, N, value); }
 
       char value[N];
+
       constexpr const char* begin() const noexcept { return value; }
       constexpr const char* end() const noexcept { return value + length; }
 
-      [[nodiscard]] constexpr auto operator<=>(const string_literal&) const = default;
+      constexpr bool operator==(const string_literal& other) const noexcept
+      {
+         return std::equal(begin(), end(), other.begin(), other.end());
+      }
+
+      constexpr bool operator<(const string_literal& other) const noexcept
+      {
+         for (size_t i = 0; i < length && i < other.length; ++i) {
+            if (value[i] < other.value[i]) return true;
+            if (value[i] > other.value[i]) return false;
+         }
+         return length < other.length;
+      }
+
+      constexpr bool operator>(const string_literal& other) const noexcept
+      {
+         return other < *this; // using 'operator <' for reversed comparison
+      }
+
+      constexpr bool operator<=(const string_literal& other) const noexcept { return !(*this > other); }
+      constexpr bool operator>=(const string_literal& other) const noexcept { return !(*this < other); }
 
       constexpr std::string_view sv() const noexcept { return {value, length}; }
-
       constexpr operator std::string_view() const noexcept { return {value, length}; }
    };
+#else
+   template <size_t N>
+   struct string_literal
+   {
+      static constexpr size_t length = (N > 0) ? (N - 1) : 0;
+      constexpr size_t size() const noexcept { return length; }
+      constexpr string_literal() noexcept = default;
+      constexpr string_literal(const char (&str)[N]) noexcept { std::copy_n(str, N, value); }
+      char value[N];
+      constexpr const char* begin() const noexcept { return value; }
+      constexpr const char* end() const noexcept { return value + length; }
+      //
+      // NOT Compatible with CPP Modules at this time:
+      //
+      [[nodiscard]] constexpr auto operator<=>(const string_literal&) const = default;
+      constexpr std::string_view sv() const noexcept { return {value, length}; }
+      constexpr operator std::string_view() const noexcept { return {value, length}; }
+   };
+
+#endif
 
    template <size_t N>
    constexpr auto string_literal_from_view(sv str)
@@ -1402,3 +1449,15 @@ namespace slx
    };
 
 } // namespace slx
+
+#ifdef NOTARIUS_MODULE
+export
+{
+   namespace slx
+   {
+      using slx::log_level;
+      using slx::notarius_opts_t;
+      using slx::notarius_t;
+   }
+}
+#endif
