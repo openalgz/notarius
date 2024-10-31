@@ -4,7 +4,7 @@
 list(APPEND CPP_MODULE_DEPENDENCIES "notarius, https://github.com/openalgz/notarius.git, main")
 
 #[[
-   Add other external dependencies here:
+   Add other external library dependencies here:
 #]]
 list(APPEND EXTERNAL_DEPENDENCIES "glaze, https://github.com/stephenberry/glaze.git, v3.6.2")
 list(APPEND EXTERNAL_DEPENDENCIES "ut,    https://github.com/openalgz/ut.git,        v0.0.3")
@@ -16,7 +16,8 @@ endif()
 
 include("${CMAKE_DIR}/core/FetchContentEx.cmake")
 
-function(fetch_and_configure_dependencies)
+function(fetch_and_configure_dependencies fetched_include_directories)
     make_cpp_modules_library("This argument ignored when 'grouped' is FALSE" "${CPP_MODULE_DEPENDENCIES}" FALSE)
-    fetch_content_and_make_available("${EXTERNAL_DEPENDENCIES}")
+    fetch_content_and_make_available("${EXTERNAL_DEPENDENCIES}" fetched_include_directories)
+    set(fetched_include_directories ${fetched_include_directories} PARENT_SCOPE)   
 endfunction()

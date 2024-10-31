@@ -35,7 +35,7 @@ int main()
       "notarius_t cerr method"_test = [&] {
          logger.cerr<log_level::error>("Test cerr {}", "output\n");
          auto actual = logger.str();
-         constexpr auto expected = ""; //  // Writing to cerr only
+         constexpr auto expected = ""; // Writing to cerr only
          expect(actual == expected);
          logger.remove_log_file();
       };

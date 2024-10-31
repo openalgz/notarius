@@ -6,6 +6,6 @@ project(notarius-mod LANGUAGES CXX)
 
 include("./cmake/prologue.cmake")
 
-fetch_and_configure_dependencies()
+fetch_and_configure_dependencies(fetched_include_directories)
 
-make_executable("src/notarius-test.cpp" "notarius")
+make_executable("src/notarius-test.cpp" "notarius" "${fetched_include_directories}")

@@ -2,8 +2,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(@ALWAYS_FETCH_DEPENDENCIES "Always fetch dependencies even if they exist locally." OFF)
-
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build (e.g., Debug, Release)." FORCE)
 endif()
@@ -16,7 +14,7 @@ endif()
 option(@VERBOSE_OUTPUT "Enable verbose output during the build process" OFF)
 
 if(@VERBOSE_OUTPUT)
-    set(CMAKE_VERBOSE_MAKEFILE ON)
+    set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "Generate verbose Makefiles" FORCE)
 endif()
 
 if(MSVC)
@@ -37,6 +35,6 @@ if (CMAKE_VERBOSE_MAKEFILE)
    message(STATUS "- importing ${CURRENT_MODULE_NAME}.")
 endif()
 
-include("${CMAKE_DIR}/Dependencies.cmake")
+include("${CMAKE_DIR}/dependencies.cmake")
 
 

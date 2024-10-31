@@ -55,9 +55,9 @@ include(FetchContent)
 
 option(@ALWAYS_FETCH_DEPENDENCIES "Always fetch dependencies even if they exist locally." ON)
 
-function(fetch_content_and_make_available deps_list)
+function(fetch_content_and_make_available deps_list fetched_include_directories)
     list(REMOVE_DUPLICATES deps_list)
-    set(FETCHED_INCLUDE_DIRECTORIES "")
+    set(fetched_include_directories "")
   
     foreach(item ${deps_list})
         string(REGEX REPLACE ",[ \t]*" ";" parsed_item "${item}")
@@ -75,7 +75,7 @@ function(fetch_content_and_make_available deps_list)
         set(source_dir "${CMAKE_BINARY_DIR}/_deps/${name}-src")
         set(include_dir "${source_dir}/include")
 
-        if (DEFINED @ALWAYS_FETCH_DEPENDENCIES OR NOT EXISTS "${source_dir}")
+        if (@ALWAYS_FETCH_DEPENDENCIES OR NOT EXISTS "${source_dir}")
             set(FETCHCONTENT_FULLY_DISCONNECTED OFF)
             message(STATUS "Fetching '${name}': URL: ${url}, Tag: ${tag}")
             FetchContent_Declare(
@@ -96,18 +96,18 @@ function(fetch_content_and_make_available deps_list)
         endif()
 
         if (EXISTS "${include_dir}")
-            list(APPEND FETCHED_INCLUDE_DIRECTORIES "${include_dir}")
+            list(APPEND fetched_include_directories "${include_dir}")
         else()
-            list(APPEND FETCHED_INCLUDE_DIRECTORIES "${source_dir}")
+            list(APPEND fetched_include_directories "${source_dir}")
         endif()
     endforeach()
 
-    list(REMOVE_DUPLICATES FETCHED_INCLUDE_DIRECTORIES)
-    set(FETCHED_INCLUDE_DIRECTORIES "${FETCHED_INCLUDE_DIRECTORIES}" PARENT_SCOPE)
+    list(REMOVE_DUPLICATES fetched_include_directories)
+    set(fetched_include_directories "${fetched_include_directories}" PARENT_SCOPE)
     
     if (CMAKE_VERBOSE_MAKEFILE)
         message(STATUS "Dependency Include Directories Manifest:")
-        foreach(item ${FETCHED_INCLUDE_DIRECTORIES})
+        foreach(item ${fetched_include_directories})
             message(STATUS " - '${item}'")
         endforeach()
     endif()
@@ -132,7 +132,7 @@ endfunction()
 
 function(make_cpp_modules_library target_name deps_list grouped)
     # Fetch and prepare dependencies
-    fetch_content_and_make_available("${deps_list}")
+    fetch_content_and_make_available("${deps_list}" fetched_include_directories)
 
     # Where the CPP Modules are being placed:
     set(MODULES_DIR "${CMAKE_BINARY_DIR}/modules")
@@ -182,18 +182,19 @@ function(make_cpp_modules_library target_name deps_list grouped)
         endif()
 
         if (NOT grouped)
-            create_module_library("${dep_name}" "${generated_cpp_module_path}" "${FETCHED_INCLUDE_DIRECTORIES}")
+            create_module_library("${dep_name}" "${generated_cpp_module_path}" "${fetched_include_directories}")
         endif()
     endforeach()
 
     if (grouped)
-        create_module_library("${target_name}" "${generated_cpp_module_path}" "${FETCHED_INCLUDE_DIRECTORIES}")
+        create_module_library("${target_name}" "${generated_cpp_module_path}" "${fetched_include_directories}")
     endif()
 endfunction()
 
-function(make_executable src_file libs)
+function(make_executable src_file libs fetched_include_directories)
     get_filename_component(test_name ${src_file} NAME_WE)
     add_executable(${test_name} ${src_file})
     target_link_libraries(${test_name} PRIVATE ${libs})
+    target_include_directories(${test_name} PRIVATE ${fetched_include_directories})
     message(STATUS "Added executable: ${test_name} from source: ${src_file}")
 endfunction()
