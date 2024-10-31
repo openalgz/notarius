@@ -811,7 +811,7 @@ namespace slx
       }
 
       // Method to get a shared lock for shared read access
-      std::shared_lock<std::shared_mutex> get_shared_read_lock()
+      std::shared_lock<std::shared_mutex> get_shared_read_lock() const
       {
          return std::shared_lock<std::shared_mutex>(*mutex_);
       }
