@@ -66,7 +66,7 @@ int main()
          logger.cout("This should NOT appear in stdout.\n");
 
          auto actual = logger.str();
-         constexpr auto expected = "";  // Writing to cout only
+         constexpr auto expected = ""; // Writing to cout only
          expect(actual == expected);
          logger.remove_log_file();
       };
