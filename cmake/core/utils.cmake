@@ -652,8 +652,8 @@ function(generate_git_version_include project_name project_url project_descripti
         RESULT_VARIABLE git_tag_result
     )
     
-    message("PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
-    message(STATUS "---------------- Ensuring version tag is well formed: ${GIT_VERSION_TAG}")
+    # message("PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
+    # message(STATUS "---------------- Ensuring version tag is well formed: ${GIT_VERSION_TAG}")
 
     if(SHOW_DIAGNOSTICS AND git_tag_result EQUAL 0)
         message("Latest Git Tag: '${GIT_VERSION_TAG}'")
@@ -875,7 +875,7 @@ macro(configure_main_project name version)
        
    endif()
    
-   message(STATUS "-----------------------------Transformed version tag:  ${${name}_PROJECT_VERSION}")
+   # message(STATUS "-----------------------------Transformed version tag:  ${${name}_PROJECT_VERSION}")
    
    set(MY_PROJECT_VERSION ${GIT_VERSION_TAG} CACHE INTERNAL "" FORCE)
 
