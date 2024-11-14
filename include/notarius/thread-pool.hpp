@@ -1,6 +1,7 @@
 #pragma once
 
-namespace slx {
+namespace slx
+{
    /**
     * @brief A simple thread pool for managing and executing tasks. see: 'notarius::forward_to'
     */
@@ -260,5 +261,5 @@ namespace slx {
       std::atomic_bool stop_requested_{false}; ///< Flag indicating if the thread pool is stopped.
       std::atomic<size_t> active_threads_{0}; ///< The number of active threads.
       size_t max_queue_size_; ///< The maximum size of the task queue.
-   };   
+   };
 }
