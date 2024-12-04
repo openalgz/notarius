@@ -834,13 +834,12 @@ namespace slx
             reserve_store_capacities();
          }
 
-         if constexpr (log_level::none == level)
-            msg = std::format(fmt, std::forward<Args>(args)...);
-            // msg = std::vformat(fmt.get(), std::make_format_args(args...));
+         if constexpr (log_level::none == level) msg = std::format(fmt, std::forward<Args>(args)...);
+         // msg = std::vformat(fmt.get(), std::make_format_args(args...));
          else {
             msg = std::format("{}: {}", to_string(level), std::format(fmt, std::forward<Args>(args)...));
-            //auto inner_formatted = std::vformat(fmt.get(), std::make_format_args(std::forward<Args>(args)...));
-            //msg = std::format("{}: {}", to_string(level), inner_formatted);
+            // auto inner_formatted = std::vformat(fmt.get(), std::make_format_args(std::forward<Args>(args)...));
+            // msg = std::format("{}: {}", to_string(level), inner_formatted);
          }
 
          if (options_.append_newline_when_missing) {
