@@ -875,13 +875,15 @@ namespace slx
       template <log_level level = log_level::none, is_loggable T>
       void print(const T& msg)
       {
-         print<level>("{}", msg);
+         using namespace std::literals;
+         print<level>("{}"sv, msg);
       }
 
       template <log_level level = log_level::none, is_loggable T>
       void print(T&& msg)
       {
-         print<level>("{}", std::forward<T>(msg));
+         using namespace std::literals;
+         print<level>("{}"sv, std::forward<T>(msg));
       }
 
       template <is_loggable... Args>
@@ -893,13 +895,15 @@ namespace slx
       template <is_loggable T>
       void info(const T& msg)
       {
-         print<log_level::info>("{}", msg);
+         using namespace std::literals;
+         print<log_level::info>("{}"sv, msg);
       }
 
       template <is_loggable T>
       void info(T&& msg)
       {
-         print<log_level::info>("{}", std::forward<T>(msg));
+         using namespace std::literals;
+         print<log_level::info>("{}"sv, std::forward<T>(msg));
       }
 
       template <is_loggable... Args>
@@ -911,13 +915,15 @@ namespace slx
       template <is_loggable T>
       void warn(const T& msg)
       {
-         print<log_level::warn>("{}", msg);
+         using namespace std::literals;
+         print<log_level::warn>("{}"sv, msg);
       }
 
       template <is_loggable T>
       void warn(T&& msg)
       {
-         print<log_level::warn>("{}", std::forward<T>(msg));
+         using namespace std::literals;
+         print<log_level::warn>("{}"sv, std::forward<T>(msg));
       }
 
       template <is_loggable... Args>
@@ -929,13 +935,15 @@ namespace slx
       template <is_loggable T>
       void error(const T& msg)
       {
-         print<log_level::error>("{}", msg);
+         using namespace std::literals;
+         print<log_level::error>("{}"sv, msg);
       }
 
       template <is_loggable T>
       void error(T&& msg)
       {
-         print<log_level::error>("{}", std::forward<T>(msg));
+         using namespace std::literals;
+         print<log_level::error>("{}"sv, std::forward<T>(msg));
       }
 
       template <log_level level = log_level::none, is_loggable... Args>
@@ -947,13 +955,15 @@ namespace slx
       template <is_loggable T>
       void operator()(const T& msg)
       {
-         print("{}", msg);
+         using namespace std::literals;
+         print("{}"sv, msg);
       }
 
       template <is_loggable T>
       void operator()(T&& msg)
       {
-         print("{}", std::forward<T>(msg));
+         using namespace std::literals;
+         print("{}"sv, std::forward<T>(msg));
       }
 
       // Always writes immediately to console while also logging
@@ -980,15 +990,17 @@ namespace slx
       template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void cout(const T& msg)
       {
+         using namespace std::literals;
          if (not options_.enable_stdout) return;
-         cout<level, flush>("{}", msg);
+         cout<level, flush>("{}"sv, msg);
       }
 
       template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void cout(T&& msg)
       {
+         using namespace std::literals;
          if (not options_.enable_stdout) return;
-         cout<level, flush>("{}", std::forward<T>(msg));
+         cout<level, flush>("{}"sv, std::forward<T>(msg));
       }
 
       // Writes to std::cerr and then flushes
@@ -1006,15 +1018,17 @@ namespace slx
       template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void cerr(const T& msg)
       {
+         using namespace std::literals;
          if (not options_.enable_stderr) return;
-         cerr<level, flush>("{}", msg);
+         cerr<level, flush>("{}"sv, msg);
       }
 
       template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void cerr(T&& msg)
       {
+         using namespace std::literals;
          if (not options_.enable_stderr) return;
-         cerr<level, flush>("{}", std::forward<T>(msg));
+         cerr<level, flush>("{}"sv, std::forward<T>(msg));
       }
 
       template <log_level level = log_level::none, bool flush = true, is_loggable... Args>
@@ -1030,21 +1044,24 @@ namespace slx
       template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void clog(const T& msg)
       {
+         using namespace std::literals;
          if (not options_.enable_stdlog) return;
-         clog<level, flush>("{}", msg);
+         clog<level, flush>("{}"sv, msg);
       }
 
       template <log_level level = log_level::none, bool flush = true, is_loggable T>
       void clog(T&& msg)
       {
+         using namespace std::literals;
          if (not options_.enable_stdlog) return;
-         clog<level, flush>("{}", std::forward<T>(msg));
+         clog<level, flush>("{}"sv, std::forward<T>(msg));
       }
 
       template <log_level level = log_level::none, is_loggable... Args>
       friend auto& operator<<(notarius_t<LogFileNameOrPath, Options>& notarius, Args&&... args)
       {
-         notarius.print<level>("{}", std::forward<Args>(args)...);
+         using namespace std::literals;
+         notarius.print<level>("{}"sv, std::forward<Args>(args)...);
          return notarius;
       }
 
