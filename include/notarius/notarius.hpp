@@ -318,8 +318,8 @@ namespace slx
    inline std::string get_next_available_filename(const std::string_view input_path_name,
                                                   const std::string_view default_extension = ".log")
    {
-      const auto max_file_index_exceeded_msg =
-         "Warning: The max file limit of " + std::to_string(max_file_index) + " has been reached.";
+      static const auto max_file_index_exceeded_msg =
+         std::format("Warning: The max file limit of {} has been reached.", max_file_index);
 
       if (!std::filesystem::exists(input_path_name)) return input_path_name.data();
 
