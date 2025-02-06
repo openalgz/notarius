@@ -233,16 +233,22 @@ namespace slx
    */
 
    template <typename T>
-   concept is_loggable = requires(T t) {
+   concept is_formattable = requires(T t) {
       {
          std::format("{}", t)
       } -> std::convertible_to<std::string>;
-   } || requires(std::ostream& os, T t) {
+   };
+
+   template <typename T>
+   concept is_streamable = requires(std::ostream& os, T t) {
       {
          os << t
       } -> std::same_as<std::ostream&>;
    };
-   ;
+
+   template <typename T>
+   concept is_loggable = is_formattable<T> || is_streamable<T>;
+
 
    template <typename T>
    concept is_filesystem_path_convertable = requires(T t) { std::filesystem::path(t); };
