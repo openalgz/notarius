@@ -21,6 +21,7 @@ module notarius;
 #include <iostream>
 #include <mutex>
 #include <optional>
+#include <print>
 #include <queue>
 #include <shared_mutex>
 #include <stop_token>
@@ -31,6 +32,20 @@ module notarius;
 #include <thread>
 #include <type_traits>
 #include <vector>
+
+#if defined(_MSVC_LANG) // MSVC uses _MSVC_LANG instead of __cplusplus
+#define CPP_VERSION _MSVC_LANG
+#else
+#define CPP_VERSION __cplusplus
+#endif
+
+#if CPP_VERSION >= 202302L
+#include <print>
+#define USE_STD_PRINT 1
+#else
+#define USE_STD_PRINT 0
+#endif
+
 
 namespace slx
 {
@@ -255,6 +270,31 @@ namespace slx
 
    template <typename T>
    concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
+
+
+   template <is_loggable... Args>
+   void cout(std::format_string<Args...> fmt, Args&&... args)
+   {
+#ifdef USE_STD_PRINT
+      std::print(fmt, std::forward<Args>(args)...);
+#else
+      std::cout << std::format(fmt, std::forward<Args>(args)...);
+#endif
+   }
+
+   template <is_loggable T>
+   void cout(const T& msg)
+   {
+      using namespace std::literals;
+      cout("{}"sv, msg);
+   }
+
+   template <is_loggable T>
+   void cout(T&& msg)
+   {
+      using namespace std::literals;
+      cout("{}"sv, std::forward<T>(msg));
+   }
 
    template <is_filesystem_path_convertable T>
    std::string get_filename(const T& path)
@@ -608,7 +648,7 @@ namespace slx
             return;
          }
          if (cout_store_.empty()) return;
-         std::cout << cout_store_;
+         std::cout << cout_store_;  
          cout_store_.clear();
          std::cout.flush();
       }
@@ -1212,7 +1252,9 @@ namespace slx
       }
    };
 
-} // namespace slx
+}// namespace slx
+
+
 
 #ifdef NOTARIUS_MODULE
 export
