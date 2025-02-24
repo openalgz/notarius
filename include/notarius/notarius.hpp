@@ -264,7 +264,6 @@ namespace slx
    template <typename T>
    concept is_loggable = is_formattable<T> || is_streamable<T>;
 
-
    template <typename T>
    concept is_filesystem_path_convertable = requires(T t) { std::filesystem::path(t); };
 
