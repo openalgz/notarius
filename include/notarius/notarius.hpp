@@ -46,7 +46,6 @@ module notarius;
 #define USE_STD_PRINT 0
 #endif
 
-
 namespace slx
 {
    /** 'string_literal' code was acquired from the glaze library: https://github.com/stephenberry/glaze.git
@@ -269,7 +268,6 @@ namespace slx
 
    template <typename T>
    concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
-
 
    template <is_loggable... Args>
    void cout(std::format_string<Args...> fmt, Args&&... args)
@@ -647,7 +645,7 @@ namespace slx
             return;
          }
          if (cout_store_.empty()) return;
-         std::cout << cout_store_;  
+         std::cout << cout_store_;
          cout_store_.clear();
          std::cout.flush();
       }
@@ -1251,9 +1249,7 @@ namespace slx
       }
    };
 
-}// namespace slx
-
-
+} // namespace slx
 
 #ifdef NOTARIUS_MODULE
 export
