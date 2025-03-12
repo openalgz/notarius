@@ -100,21 +100,21 @@ void run_api_tests()
 
   suite notarius_std_cout_cerr_test = [] {
       constexpr auto max_runs = 100;
-      "std_cout"_test = [] {
+      "std_cout"_test = [&] {
          notarius_t<"std_cout_test.md", notarius_opts_t{.log_from_stdout = true}> logger;
          for (auto i = 0; i < max_runs; ++i) {
             logger.cout("writing to std::cout and log file: std_cout_test.md (line {} of {}).\n", i + 1, max_runs);
          }
       };
 
-      "std_cerr"_test = [] {
+      "std_cerr"_test = [&] {
          notarius_t<"std_cerr_test.md", notarius_opts_t{.log_from_stderr = true}> logger;
          for (auto i = 0; i < max_runs; ++i) {
             logger.cerr("writing to std::cerr and log file: std_cerr_test.md (line {} of {}).\n", i + 1, max_runs);
          }
       };
 
-      "std_cout_cerr"_test = [] {
+      "std_cout_cerr"_test = [&] {
          notarius_t<"std_cout_cerr_test.md", notarius_opts_t{.log_from_stdout = true, .log_from_stderr = true}> logger;
          for (auto i = 0; i < max_runs; ++i) {
             logger.cout("writing to std::cout and log file: std_cout_cerr_test.md (line {} of {}).\n", i + 1, max_runs);
