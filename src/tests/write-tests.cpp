@@ -98,7 +98,7 @@ void run_api_tests()
       };
    };
 
-  suite notarius_std_cout_cerr_test = [] {
+   suite notarius_std_cout_cerr_test = [] {
       constexpr auto max_runs = 100;
       "std_cout"_test = [] {
          notarius_t<"std_cout_test.md", notarius_opts_t{.log_from_stdout = true}> logger;
@@ -122,134 +122,134 @@ void run_api_tests()
          }
       };
    };
-      
-  suite notarius_t_tests = [] {
-     "notarius_t print method"_test = [] {
-        notarius_t<"test-log-file.md", notarius_opts_t{.enable_file_logging = true}> logger;
-        remove_files({logger.logfile_name()});
-        logger.print<log_level::none>("Hello, {}", "world\n");
-        logger.print<log_level::info>("Hello, {}", "world\n");
-        logger.print<log_level::warn>("Hello, {}", "world\n");
-        logger.print<log_level::error>("Hello, {}", "world\n");
-        logger.print<log_level::exception>("Hello, {}", "world\n");
-        auto actual = logger.str();
-        constexpr auto expected =
-           "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
-        expect(actual == expected);
-     };
 
-     "notarius_t operator() method"_test = [] {
-        notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
-        logger.enable_file_logging();
-        remove_files({logger.logfile_name()});
-        logger.operator()<log_level::none>("Hello, {}", "world\n");
-        logger.operator()<log_level::info>("Hello, {}", "world\n");
-        logger.operator()<log_level::warn>("Hello, {}", "world\n");
-        logger.operator()<log_level::error>("Hello, {}", "world\n");
-        logger.operator()<log_level::exception>("Hello, {}", "world\n");
-        auto actual = logger.str();
-        constexpr auto expected =
-           "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
-        expect(actual == expected);
-     };
+   suite notarius_t_tests = [] {
+      "notarius_t print method"_test = [] {
+         notarius_t<"test-log-file.md", notarius_opts_t{.enable_file_logging = true}> logger;
+         remove_files({logger.logfile_name()});
+         logger.print<log_level::none>("Hello, {}", "world\n");
+         logger.print<log_level::info>("Hello, {}", "world\n");
+         logger.print<log_level::warn>("Hello, {}", "world\n");
+         logger.print<log_level::error>("Hello, {}", "world\n");
+         logger.print<log_level::exception>("Hello, {}", "world\n");
+         auto actual = logger.str();
+         constexpr auto expected =
+            "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
+         expect(actual == expected);
+      };
 
-     "notarius_t write method"_test = [] {
-        notarius_t<"test-log-file.md", notarius_opts_t{.enable_file_logging = true}> logger;
-        remove_files({logger.logfile_name()});
-        logger.write<log_level::none>("Hello, {}", "world\n");
-        logger.write<log_level::info>("Hello, {}", "world\n");
-        logger.write<log_level::warn>("Hello, {}", "world\n");
-        logger.write<log_level::error>("Hello, {}", "world\n");
-        logger.write<log_level::exception>("Hello, {}", "world\n");
-        auto actual = logger.str();
-        constexpr auto expected =
-           "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
-        expect(actual == expected);
-     };
+      "notarius_t operator() method"_test = [] {
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
+         logger.enable_file_logging();
+         remove_files({logger.logfile_name()});
+         logger.operator()<log_level::none>("Hello, {}", "world\n");
+         logger.operator()<log_level::info>("Hello, {}", "world\n");
+         logger.operator()<log_level::warn>("Hello, {}", "world\n");
+         logger.operator()<log_level::error>("Hello, {}", "world\n");
+         logger.operator()<log_level::exception>("Hello, {}", "world\n");
+         auto actual = logger.str();
+         constexpr auto expected =
+            "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
+         expect(actual == expected);
+      };
 
-     "notarius_t cout method"_test = [] {
-        notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
-        logger.enable_stdout();
-        std_stream_redirection_t redirect_stdout_to_logger(std::cout, logger.rdbuf());
-        logger.cout<log_level::none>("Hello, {}", "world\n");
-        logger.cout<log_level::info>("Hello, {}", "world\n");
-        logger.cout<log_level::warn>("Hello, {}", "world\n");
-        logger.cout<log_level::error>("Hello, {}", "world\n");
-        logger.cout<log_level::exception>("Hello, {}", "world\n");
-        auto actual = logger.str();
-        constexpr auto expected =
-           "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
-        expect(actual == expected);
-     };
+      "notarius_t write method"_test = [] {
+         notarius_t<"test-log-file.md", notarius_opts_t{.enable_file_logging = true}> logger;
+         remove_files({logger.logfile_name()});
+         logger.write<log_level::none>("Hello, {}", "world\n");
+         logger.write<log_level::info>("Hello, {}", "world\n");
+         logger.write<log_level::warn>("Hello, {}", "world\n");
+         logger.write<log_level::error>("Hello, {}", "world\n");
+         logger.write<log_level::exception>("Hello, {}", "world\n");
+         auto actual = logger.str();
+         constexpr auto expected =
+            "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
+         expect(actual == expected);
+      };
 
-     "notarius_t cerr method"_test = [] {
-        notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
-        logger.enable_stderr();
-        std_stream_redirection_t redirect_stdout_to_logger(std::cerr, logger.rdbuf());
-        logger.cerr<log_level::none>("Hello, {}", "world\n");
-        logger.cerr<log_level::info>("Hello, {}", "world\n");
-        logger.cerr<log_level::warn>("Hello, {}", "world\n");
-        logger.cerr<log_level::error>("Hello, {}", "world\n");
-        logger.cerr<log_level::exception>("Hello, {}", "world\n");
-        auto actual = logger.str();
-        constexpr auto expected =
-           "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
-        expect(actual == expected);
-     };
+      "notarius_t cout method"_test = [] {
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
+         logger.enable_stdout();
+         std_stream_redirection_t redirect_stdout_to_logger(std::cout, logger.rdbuf());
+         logger.cout<log_level::none>("Hello, {}", "world\n");
+         logger.cout<log_level::info>("Hello, {}", "world\n");
+         logger.cout<log_level::warn>("Hello, {}", "world\n");
+         logger.cout<log_level::error>("Hello, {}", "world\n");
+         logger.cout<log_level::exception>("Hello, {}", "world\n");
+         auto actual = logger.str();
+         constexpr auto expected =
+            "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
+         expect(actual == expected);
+      };
 
-     "notarius_t clog method"_test = [] {
-        notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
-        logger.enable_stdlog();
-        std::ostringstream oss;
-        std_stream_redirection_t redirect(std::clog, oss.rdbuf());
-        logger.cerr<log_level::none>("Hello, {}", "world\n");
-        logger.cerr<log_level::info>("Hello, {}", "world\n");
-        logger.cerr<log_level::warn>("Hello, {}", "world\n");
-        logger.cerr<log_level::error>("Hello, {}", "world\n");
-        logger.cerr<log_level::exception>("Hello, {}", "world\n");
-        auto actual = logger.str();
-        constexpr auto expected =
-           "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
-        expect(actual == expected);
-     };
+      "notarius_t cerr method"_test = [] {
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
+         logger.enable_stderr();
+         std_stream_redirection_t redirect_stdout_to_logger(std::cerr, logger.rdbuf());
+         logger.cerr<log_level::none>("Hello, {}", "world\n");
+         logger.cerr<log_level::info>("Hello, {}", "world\n");
+         logger.cerr<log_level::warn>("Hello, {}", "world\n");
+         logger.cerr<log_level::error>("Hello, {}", "world\n");
+         logger.cerr<log_level::exception>("Hello, {}", "world\n");
+         auto actual = logger.str();
+         constexpr auto expected =
+            "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
+         expect(actual == expected);
+      };
 
-     "notarius_t operator<< method"_test = [] {
-        notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
-        logger.enable_file_logging();
-        remove_files({logger.logfile_name()});
-        logger << std::format("Hello, {}", "world\n");
-        logger << std::format("{}: Hello, {}", "info", "world\n");
-        logger << std::format("{}: Hello, {}", "warn", "world\n");
-        logger << std::format("{}: Hello, {}", "error", "world\n");
-        logger << std::format("{}: Hello, {}", "exception", "world\n");
-        auto actual = logger.str();
-        constexpr auto expected =
-           "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
-        expect(actual == expected);
-     };
+      "notarius_t clog method"_test = [] {
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
+         logger.enable_stdlog();
+         std::ostringstream oss;
+         std_stream_redirection_t redirect(std::clog, oss.rdbuf());
+         logger.cerr<log_level::none>("Hello, {}", "world\n");
+         logger.cerr<log_level::info>("Hello, {}", "world\n");
+         logger.cerr<log_level::warn>("Hello, {}", "world\n");
+         logger.cerr<log_level::error>("Hello, {}", "world\n");
+         logger.cerr<log_level::exception>("Hello, {}", "world\n");
+         auto actual = logger.str();
+         constexpr auto expected =
+            "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
+         expect(actual == expected);
+      };
 
-     "notarius_t default options"_test = [] {
-        notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
-        expect(logger.options().enable_stdout == true);
-        expect(logger.options().enable_stderr == true);
-        expect(logger.options().enable_stdlog == false);
-        expect(logger.options().enable_file_logging == false);
-     };
+      "notarius_t operator<< method"_test = [] {
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
+         logger.enable_file_logging();
+         remove_files({logger.logfile_name()});
+         logger << std::format("Hello, {}", "world\n");
+         logger << std::format("{}: Hello, {}", "info", "world\n");
+         logger << std::format("{}: Hello, {}", "warn", "world\n");
+         logger << std::format("{}: Hello, {}", "error", "world\n");
+         logger << std::format("{}: Hello, {}", "exception", "world\n");
+         auto actual = logger.str();
+         constexpr auto expected =
+            "Hello, world\ninfo: Hello, world\nwarn: Hello, world\nerror: Hello, world\nexception: Hello, world\n";
+         expect(actual == expected);
+      };
 
-     "notarius_t log to file"_test = [] {
-        slx::notarius_t<"test_log.md", notarius_opts_t{}> logger;
-        logger.enable_file_logging();
-        logger("This is a test log entry.");
-        logger.close();
-        std::ifstream log_file(logger.logfile_path());
-        expect(log_file.is_open() == true);
-        std::string log_content;
-        std::getline(log_file, log_content);
-        expect(log_content == "This is a test log entry.");
-        log_file.close();
-        remove_files({logger.logfile_path()});
-     };
-  };
+      "notarius_t default options"_test = [] {
+         notarius_t<"test-log-file.md", notarius_opts_t{}> logger;
+         expect(logger.options().enable_stdout == true);
+         expect(logger.options().enable_stderr == true);
+         expect(logger.options().enable_stdlog == false);
+         expect(logger.options().enable_file_logging == false);
+      };
+
+      "notarius_t log to file"_test = [] {
+         slx::notarius_t<"test_log.md", notarius_opts_t{}> logger;
+         logger.enable_file_logging();
+         logger("This is a test log entry.");
+         logger.close();
+         std::ifstream log_file(logger.logfile_path());
+         expect(log_file.is_open() == true);
+         std::string log_content;
+         std::getline(log_file, log_content);
+         expect(log_content == "This is a test log entry.");
+         log_file.close();
+         remove_files({logger.logfile_path()});
+      };
+   };
 };
 
 int main()
