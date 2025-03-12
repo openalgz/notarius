@@ -21,7 +21,6 @@ module notarius;
 #include <iostream>
 #include <mutex>
 #include <optional>
-#include <print>
 #include <queue>
 #include <shared_mutex>
 #include <stop_token>
@@ -33,19 +32,17 @@ module notarius;
 #include <type_traits>
 #include <vector>
 
-#if defined(_MSVC_LANG) // MSVC uses _MSVC_LANG instead of __cplusplus
-#define CPP_VERSION _MSVC_LANG
-#else
-#define CPP_VERSION __cplusplus
+#if defined(USE_STD_PRINT)
+# if defined(_MSC_VER)
+#  define CPP_VERSION _MSVC_LANG
+# else
+#  define CPP_VERSION __cplusplus
+# endif
+# if __has_include(<print>) && CPP_VERSION >= 202302L
+#  include <print>
+# define USE_STD_PRINT
+# endif
 #endif
-
-#if CPP_VERSION >= 202302L
-#include <print>
-#define USE_STD_PRINT 1
-#else
-#define USE_STD_PRINT 0
-#endif
-
 
 namespace slx
 {
@@ -270,6 +267,7 @@ namespace slx
    template <typename T>
    concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
 
+   // 'cout' using std::print when supported.
 
    template <is_loggable... Args>
    void cout(std::format_string<Args...> fmt, Args&&... args)
@@ -531,6 +529,12 @@ namespace slx
       size_t flush_to_log_at_bytes{1'048'576 * 16}; // 16 MB
    };
 
+   struct output_as_json_t
+   {
+      std::unordered_map<std::string, std::vector<std::string>> data;
+   };
+
+
    /**
       @brief A logger class for writing log messages to a file.
       @tparam LogFileNameOrPath The file or path name of the logger. If not provided, it defaults to 'notatarius'.
@@ -689,6 +693,11 @@ namespace slx
       //
       void write_to_std_output_stores(const std::string& msg, log_level level)
       {
+         if (!options_.enable_file_logging &&
+             (options_.enable_stdout || options_.enable_stderr || options_.enable_stdlog)) {
+            options_.enable_file_logging = true;
+         }
+
          if (not options_.enable_stdout and not options_.enable_stderr and not options_.enable_stdlog) return;
 
          auto immediate_mode = options_.immediate_mode || toggle_immediate_mode_;
@@ -900,11 +909,8 @@ namespace slx
 
          write_to_std_output_stores(msg, level);
 
-         if (forward_to) {
-            forward_to(msg);
-            // thread_pool_.enqueue([this, msg = std::string(msg)]() { forward_to(msg); });
-         }
-
+         if (forward_to) forward_to(msg);
+         
          const size_t check_size = logging_store_.size() + msg.size();
 
          if (options_.split_log_files and (check_size >= options_.split_log_file_at_size_bytes)) {
