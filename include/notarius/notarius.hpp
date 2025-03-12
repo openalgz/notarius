@@ -267,8 +267,6 @@ namespace slx
    template <typename T>
    concept is_standard_ostream = std::is_base_of_v<std::ostream, std::remove_reference_t<T>>;
 
-   // 'cout' using std::print when supported.
-
    template <is_loggable... Args>
    void cout(std::format_string<Args...> fmt, Args&&... args)
    {
@@ -651,7 +649,7 @@ namespace slx
             return;
          }
          if (cout_store_.empty()) return;
-         std::cout << cout_store_;  
+         std::cout << cout_store_;
          cout_store_.clear();
          std::cout.flush();
       }
@@ -1257,9 +1255,7 @@ namespace slx
       }
    };
 
-}// namespace slx
-
-
+} // namespace slx
 
 #ifdef NOTARIUS_MODULE
 export
