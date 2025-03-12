@@ -33,15 +33,15 @@ module notarius;
 #include <vector>
 
 #if defined(USE_STD_PRINT)
-# if defined(_MSC_VER)
-#  define CPP_VERSION _MSVC_LANG
-# else
-#  define CPP_VERSION __cplusplus
-# endif
-# if __has_include(<print>) && CPP_VERSION >= 202302L
-#  include <print>
-# define USE_STD_PRINT
-# endif
+#if defined(_MSC_VER)
+#define CPP_VERSION _MSVC_LANG
+#else
+#define CPP_VERSION __cplusplus
+#endif
+#if __has_include(<print>) && CPP_VERSION >= 202302L
+#include <print>
+#define USE_STD_PRINT
+#endif
 #endif
 
 namespace slx
@@ -532,7 +532,6 @@ namespace slx
       std::unordered_map<std::string, std::vector<std::string>> data;
    };
 
-
    /**
       @brief A logger class for writing log messages to a file.
       @tparam LogFileNameOrPath The file or path name of the logger. If not provided, it defaults to 'notatarius'.
@@ -908,7 +907,7 @@ namespace slx
          write_to_std_output_stores(msg, level);
 
          if (forward_to) forward_to(msg);
-         
+
          const size_t check_size = logging_store_.size() + msg.size();
 
          if (options_.split_log_files and (check_size >= options_.split_log_file_at_size_bytes)) {
